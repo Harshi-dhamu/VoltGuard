@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-/// Represents the result produced by the Physics Engine.
+/// Result produced by the Physics Engine.
+///
+/// This structure represents the physical consequences predicted
+/// for an industrial command.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PhysicsResult {
     pub device_id: String,
@@ -16,15 +19,16 @@ pub struct PhysicsResult {
     pub status: PhysicsStatus,
 }
 
-/// Represents the physical safety state reported by the Physics Engine.
+/// Physical safety state reported by the Physics Engine.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PhysicsStatus {
     Safe,
+    Warning,
     CatastrophicFailure,
 }
 
-/// The final security decision produced by the Decision Engine.
+/// Final security decision produced by the Decision Engine.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Decision {
@@ -32,10 +36,28 @@ pub enum Decision {
     Drop,
 }
 
-/// Complete result returned by the Decision Engine.
+/// Explains why the Decision Engine produced a particular decision.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DecisionReason {
+    PhysicsStatusSafe,
+    PhysicsStatusWarning,
+    CatastrophicFailure,
+
+    PressureLimitExceeded,
+    FlowLimitExceeded,
+    PumpSpeedExceeded,
+
+    InvalidPhysicalState,
+    InvalidInput,
+    MissingPhysicsData,
+    UnknownPhysicsStatus,
+}
+
+/// Complete decision returned by the Decision Engine.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DecisionResult {
     pub device_id: String,
     pub decision: Decision,
-    pub reason: String,
+    pub reason: DecisionReason,
 }

@@ -1,6 +1,7 @@
 use crate::error::DecisionError;
 use crate::models::{
     Decision,
+    DecisionReason,
     DecisionResult,
     PhysicsResult,
     PhysicsStatus,
@@ -8,8 +9,8 @@ use crate::models::{
 
 /// Core Decision Engine.
 ///
-/// The engine receives a Physics Engine result and produces
-/// a deterministic ALLOW or DROP decision.
+/// Day 2 focuses on using strongly typed decision models.
+/// Detailed physical safety rules will be expanded in later days.
 #[derive(Debug, Default)]
 pub struct DecisionEngine;
 
@@ -21,9 +22,12 @@ impl DecisionEngine {
 
     /// Evaluates a Physics Engine result.
     ///
-    /// Day 1 rules:
+    /// Current basic policy:
     /// - SAFE -> ALLOW
     /// - CATASTROPHIC_FAILURE -> DROP
+    ///
+    /// WARNING policy will be finalized as part of the later
+    /// safety-rule implementation.
     pub fn evaluate(
         &self,
         physics_result: &PhysicsResult,
@@ -31,22 +35,30 @@ impl DecisionEngine {
         self.validate_input(physics_result)?;
 
         let (decision, reason) = match physics_result.status {
-            PhysicsStatus::Safe => {
-                (Decision::Allow, "PHYSICS_STATUS_SAFE")
-            }
+            PhysicsStatus::Safe => (
+                Decision::Allow,
+                DecisionReason::PhysicsStatusSafe,
+            ),
 
-            PhysicsStatus::CatastrophicFailure => {
-                (Decision::Drop, "CATASTROPHIC_FAILURE")
-            }
+            PhysicsStatus::Warning => (
+                Decision::Drop,
+                DecisionReason::PhysicsStatusWarning,
+            ),
+
+            PhysicsStatus::CatastrophicFailure => (
+                Decision::Drop,
+                DecisionReason::CatastrophicFailure,
+            ),
         };
 
         Ok(DecisionResult {
             device_id: physics_result.device_id.clone(),
             decision,
-            reason: reason.to_string(),
+            reason,
         })
     }
 
+    /// Performs basic structural validation of the Physics Engine result.
     fn validate_input(
         &self,
         physics_result: &PhysicsResult,
@@ -83,7 +95,7 @@ impl DecisionEngine {
 mod tests {
     use super::*;
 
-    fn create_safe_result() -> PhysicsResult {
+    fn create_result(status: PhysicsStatus) -> PhysicsResult {
         PhysicsResult {
             device_id: "PUMP_01".to_string(),
             command: "SET_SPEED".to_string(),
@@ -92,53 +104,61 @@ mod tests {
             predicted_pressure: Some(80.0),
             pressure_limit: Some(100.0),
             predicted_flow: Some(200.0),
-            status: PhysicsStatus::Safe,
-        }
-    }
-
-    fn create_catastrophic_result() -> PhysicsResult {
-        PhysicsResult {
-            device_id: "PUMP_01".to_string(),
-            command: "SET_SPEED".to_string(),
-            value: 50000.0,
-            unit: "RPM".to_string(),
-            predicted_pressure: Some(250.0),
-            pressure_limit: Some(100.0),
-            predicted_flow: Some(450.0),
-            status: PhysicsStatus::CatastrophicFailure,
+            status,
         }
     }
 
     #[test]
-    fn safe_result_should_allow() {
+    fn safe_status_uses_allow_decision_reason() {
         let engine = DecisionEngine::new();
 
         let result = engine
-            .evaluate(&create_safe_result())
-            .expect("safe input should produce a decision");
+            .evaluate(&create_result(PhysicsStatus::Safe))
+            .expect("safe result should be accepted");
 
         assert_eq!(result.decision, Decision::Allow);
-        assert_eq!(result.reason, "PHYSICS_STATUS_SAFE");
+        assert_eq!(
+            result.reason,
+            DecisionReason::PhysicsStatusSafe
+        );
     }
 
     #[test]
-    fn catastrophic_result_should_drop() {
+    fn warning_status_has_explicit_decision_reason() {
         let engine = DecisionEngine::new();
 
         let result = engine
-            .evaluate(&create_catastrophic_result())
-            .expect("catastrophic input should produce a decision");
+            .evaluate(&create_result(PhysicsStatus::Warning))
+            .expect("warning result should produce a decision");
 
         assert_eq!(result.decision, Decision::Drop);
-        assert_eq!(result.reason, "CATASTROPHIC_FAILURE");
+        assert_eq!(
+            result.reason,
+            DecisionReason::PhysicsStatusWarning
+        );
+    }
+
+    #[test]
+    fn catastrophic_status_uses_catastrophic_reason() {
+        let engine = DecisionEngine::new();
+
+        let result = engine
+            .evaluate(&create_result(PhysicsStatus::CatastrophicFailure))
+            .expect("catastrophic result should produce a decision");
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::CatastrophicFailure
+        );
     }
 
     #[test]
     fn empty_device_id_should_be_rejected() {
         let engine = DecisionEngine::new();
 
-        let mut input = create_safe_result();
-        input.device_id = String::new();
+        let mut input = create_result(PhysicsStatus::Safe);
+        input.device_id.clear();
 
         let result = engine.evaluate(&input);
 
@@ -149,8 +169,8 @@ mod tests {
     fn empty_command_should_be_rejected() {
         let engine = DecisionEngine::new();
 
-        let mut input = create_safe_result();
-        input.command = String::new();
+        let mut input = create_result(PhysicsStatus::Safe);
+        input.command.clear();
 
         let result = engine.evaluate(&input);
 
