@@ -235,4 +235,66 @@ QMainWindow,
     color: #6f7d8b;
     font-size: 9px;
 }
+#navigationButton[active="true"] {
+    background-color: #18232d;
+    color: #e6edf3;
+    border-left: 2px solid #55c77a;
+}
+
+#navigationButton[active="true"]:hover {
+    background-color: #1c2934;
+}
+
+#transparentContainer {
+    background-color: transparent;
+    border: none;
+}
+
+#assetName {
+    color: #d7dee7;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+#assetType {
+    color: #667382;
+    font-size: 10px;
+}
+
+#assetOnline {
+    color: #55c77a;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+#assetWarning {
+    color: #d6a84f;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+#logRow {
+    background-color: #10171f;
+    border: 1px solid #202b36;
+    border-radius: 5px;
+}
+
+#logTime {
+    color: #596674;
+    font-family: "Consolas";
+    font-size: 9px;
+    min-width: 80px;
+}
+
+#logCategory {
+    color: #7e8c9a;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 90px;
+}
+
+#logMessage {
+    color: #aab5c0;
+    font-size: 10px;
+}
 """
