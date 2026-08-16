@@ -1,5 +1,6 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import json
+from typing import Optional, Dict, Any
 
 @dataclass
 class ModbusPacket:
@@ -20,6 +21,11 @@ class NormalizedCommand:
     unit: str
     transaction_id: int
     timestamp: float
+    is_suspicious: bool = False
+    suspicious_reason: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
     def to_json(self) -> str:
-        return json.dumps(asdict(self), indent=2)
+        return json.dumps(self.to_dict(), indent=2)
