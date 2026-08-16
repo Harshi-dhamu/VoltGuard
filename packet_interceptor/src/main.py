@@ -1,5 +1,6 @@
 import sys
 import os
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.parser import ModbusParser, ModbusParserError
@@ -7,42 +8,45 @@ from src.validator import PacketValidator
 from src.normalizer import CommandNormalizer
 from src.suspicious_detector import SuspiciousTrafficDetector
 from src.physics_interface import PhysicsEngineInterface
+from src.logger import setup_logger
 from scripts.mock_generator import generate_expanded_traffic
 
 def run_pipeline():
+    logger = setup_logger()
     physics_interface = PhysicsEngineInterface()
     traffic = generate_expanded_traffic()
 
-    print("==================================================")
-    print("      VOLTGUARD PACKET INTERCEPTOR PIPELINE       ")
-    print("==================================================\n")
+    logger.info("==================================================")
+    logger.info("      VOLTGUARD PACKET INTERCEPTOR PIPELINE       ")
+    logger.info("==================================================\n")
 
     for scenario, raw_bytes in traffic.items():
-        print(f"--- Scenario: {scenario} ---")
+        logger.info(f"--- Processing Scenario: {scenario} ---")
         try:
             # Step 1: Parse
             packet = ModbusParser.parse_packet(raw_bytes)
-            
-            # Step 2: Validate (Day 6)
+            logger.info(f"Parsed TxID: {packet.transaction_id}, FC: {packet.function_code}, Register: {packet.register_address}")
+
+            # Step 2: Validate
             is_valid, validation_msg = PacketValidator.validate(packet)
             if not is_valid:
-                print(f"[REJECTED] Validation Failed: {validation_msg}\n")
+                logger.warning(f"[REJECTED] Validation Failed: {validation_msg}\n")
                 continue
 
-            # Step 3: Normalize (Day 5)
+            # Step 3: Normalize
             normalized = CommandNormalizer.normalize(packet)
 
-            # Step 4: Analyze Suspicious Parameters (Day 9)
+            # Step 4: Detect Suspicious Traffic
             analyzed = SuspiciousTrafficDetector.analyze(normalized)
             if analyzed.is_suspicious:
-                print(f"[WARNING] Suspicious Parameter Pre-Flagged: {analyzed.suspicious_reason}")
+                logger.warning(f"[SUSPICIOUS DETECTED] {analyzed.suspicious_reason}")
 
-            # Step 5: Interface to Physics Engine (Day 8)
+            # Step 5: Send to Physics Interface
             physics_interface.send_to_physics_engine(analyzed)
-            print()
+            logger.info(f"[DISPATCHED] {analyzed.device_id} -> {analyzed.command}: {analyzed.value} {analyzed.unit}\n")
 
         except ModbusParserError as e:
-            print(f"[ERROR] Parsing Failed: {e}\n")
+            logger.error(f"[PARSER ERROR] {e}\n")
 
 if __name__ == "__main__":
     run_pipeline()
