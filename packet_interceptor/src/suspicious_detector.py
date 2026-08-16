@@ -1,6 +1,6 @@
 from .models.modbus_packet import NormalizedCommand
 
-# Operational thresholds (Physics Engine & Decision Engine make the final call)
+# Operational safety thresholds
 SAFETY_THRESHOLDS = {
     "PUMP_01": {"max": 5000.0, "min": 0.0, "unit": "RPM"},
     "VALVE_01": {"max": 100.0, "min": 0.0, "unit": "%"},
