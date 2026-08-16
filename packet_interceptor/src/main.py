@@ -1,31 +1,33 @@
-import os
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Ensure module path is accessible
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from src.parser import ModbusParser, ModbusParserError
+from src.validator import PacketValidator
+from src.normalizer import CommandNormalizer
+from scripts.mock_generator import generate_sample_traffic
 
-from models.modbus_packet import ModbusPacket
+def process_raw_stream(raw_data: bytes):
+    try:
+        packet = ModbusParser.parse_packet(raw_data)
+        is_valid, msg = PacketValidator.validate(packet)
+        if not is_valid:
+            print(f"[WARNING] Packet Rejected: {msg}")
+            return None
 
-
-def main():
-    print("===========================================")
-    print(" VoltGuard - Packet Interceptor (Python)   ")
-    print("===========================================")
-
-    # Test data structure initialization
-    sample_packet = ModbusPacket(
-        transaction_id=1001,
-        protocol_id=0,
-        length=6,
-        unit_id=1,
-        function_code=0x06,  # Write Single Register
-        register_address=40001,
-        register_value=1000,
-    )
-
-    print("[INFO] Initialized sample Modbus packet successfully:")
-    sample_packet.print_summary()
-
+        normalized = CommandNormalizer.normalize(packet)
+        print(f"[INFO] Processed Device: {normalized.device_id} | Command: {normalized.command} | Value: {normalized.value} {normalized.unit}")
+        return normalized.to_json()
+    except ModbusParserError as e:
+        print(f"[ERROR] Parsing Failed: {e}")
+        return None
 
 if __name__ == "__main__":
-    main()
+    print("=== VoltGuard Packet Interceptor ===")
+    traffic = generate_sample_traffic()
+    for name, raw_bytes in traffic.items():
+        print(f"\nScenario: {name}")
+        json_output = process_raw_stream(raw_bytes)
+        if json_output:
+            print("Normalized Payload for Physics Engine (Dhruti):")
+            print(json_output)
