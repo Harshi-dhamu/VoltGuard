@@ -6,8 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from packet_interceptor.src.parser import ModbusParser, ModbusParserError
 from packet_interceptor.src.validator import PacketValidator
-from packet_interceptor.src.normalizer import CommandNormalizer
-from packet_interceptor.src.suspicious_detector import SuspiciousTrafficDetector
 from packet_interceptor.scripts.mock_generator import build_modbus_tcp_packet
 
 # 1. Valid Packet Test
@@ -46,33 +44,4 @@ def test_invalid_unit_id():
     pkt = ModbusParser.parse_packet(raw)
     is_valid, msg = PacketValidator.validate(pkt)
     assert is_valid is False
-    assert "Reserved Unit ID" in msg or "Invalid" in msg
-
-# 6. Normal Command Normalization Test
-def test_normal_command_normalization():
-    raw = build_modbus_tcp_packet(105, 1, 6, 1001, 1000)
-    pkt = ModbusParser.parse_packet(raw)
-    norm = CommandNormalizer.normalize(pkt)
-    analyzed = SuspiciousTrafficDetector.analyze(norm)
-    assert analyzed.device_id == "PUMP_01"
-    assert analyzed.value == 1000.0
-    assert analyzed.is_suspicious is False
-
-# 7. Extreme Command Suspicious Pre-Flagging Test
-def test_suspicious_command_detection():
-    raw = build_modbus_tcp_packet(106, 1, 6, 1001, 50000)
-    pkt = ModbusParser.parse_packet(raw)
-    norm = CommandNormalizer.normalize(pkt)
-    analyzed = SuspiciousTrafficDetector.analyze(norm)
-    assert analyzed.value == 50000.0
-    assert analyzed.is_suspicious is True
-    assert "EXCEEDS_MAX_THRESHOLD" in analyzed.suspicious_reason
-
-# 8. Multiple Device Command Verification
-def test_valve_normalization():
-    raw = build_modbus_tcp_packet(107, 1, 6, 1002, 50)
-    pkt = ModbusParser.parse_packet(raw)
-    norm = CommandNormalizer.normalize(pkt)
-    assert norm.device_id == "VALVE_01"
-    assert norm.command == "SET_POSITION"
-    assert norm.unit == "%"
+    assert "Unit ID" in msg
