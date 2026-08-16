@@ -6,7 +6,7 @@ logger = logging.getLogger("PhysicsInterface")
 
 class PhysicsEngineInterface:
     """
-    Decoupled interface for Dhruti's Physics Engine.
+    Decoupled interface contract for Dhruti's Physics Engine.
     Dispatches normalized commands without direct dependency on raw packet structures.
     """
     def __init__(self, dispatch_callback: Optional[Callable[[Dict[str, Any]], bool]] = None):
