@@ -2,11 +2,12 @@ import pytest
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+# Add packet_interceptor root directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from packet_interceptor.src.parser import ModbusParser, ModbusParserError
-from packet_interceptor.src.validator import PacketValidator
-from packet_interceptor.scripts.mock_generator import build_modbus_tcp_packet
+from src.parser import ModbusParser, ModbusParserError
+from src.validator import PacketValidator
+from scripts.mock_generator import build_modbus_tcp_packet
 
 # 1. Valid Packet Test
 def test_valid_packet_parsing():
