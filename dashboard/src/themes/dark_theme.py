@@ -297,4 +297,128 @@ QMainWindow,
     color: #aab5c0;
     font-size: 10px;
 }
+
+#trafficToolbar {
+    background-color: #0f171e;
+    border: 1px solid #202b36;
+    border-radius: 6px;
+}
+
+#monitoringStatus {
+    color: #55c77a;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+#monitoringPaused {
+    color: #d6a84f;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+#monitoringInfo {
+    color: #697786;
+    font-size: 10px;
+}
+
+#secondaryButton {
+    background-color: #151e27;
+    color: #aab5c0;
+    border: 1px solid #293642;
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+#secondaryButton:hover {
+    background-color: #1b2732;
+    color: #e0e7ed;
+    border-color: #3a4a58;
+}
+
+#secondaryButton:pressed {
+    background-color: #10171e;
+}
+
+#trafficStatCard {
+    background-color: #10171f;
+    border: 1px solid #202b36;
+    border-radius: 6px;
+}
+
+#trafficStatTitle {
+    color: #687684;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+#trafficStatValue {
+    color: #e2e8ee;
+    font-size: 21px;
+    font-weight: 650;
+}
+
+#trafficTable {
+    background-color: #0d141b;
+    color: #aeb8c2;
+    border: 1px solid #202b36;
+    gridline-color: #18232d;
+    selection-background-color: #18252f;
+    selection-color: #e3e9ee;
+}
+
+#trafficTable QHeaderView::section {
+    background-color: #111a22;
+    color: #657381;
+    border: none;
+    border-bottom: 1px solid #26323d;
+    padding: 9px 7px;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+#trafficTable QTableCornerButton::section {
+    background-color: #111a22;
+}
+
+#trafficTable QScrollBar:vertical {
+    background-color: #0d141b;
+    width: 8px;
+    margin: 0;
+}
+
+#trafficTable QScrollBar::handle:vertical {
+    background-color: #2a3743;
+    min-height: 25px;
+    border-radius: 4px;
+}
+
+#trafficTable QScrollBar::add-line:vertical,
+#trafficTable QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+#trafficTable QScrollBar:horizontal {
+    background-color: #0d141b;
+    height: 8px;
+}
+
+#trafficTable QScrollBar::handle:horizontal {
+    background-color: #2a3743;
+    border-radius: 4px;
+}
+
+#blockedTraffic {
+    color: #df6b6b;
+    font-weight: 700;
+}
+
+#allowedTraffic {
+    color: #55c77a;
+    font-weight: 700;
+}
 """
