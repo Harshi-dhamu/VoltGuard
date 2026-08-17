@@ -421,4 +421,56 @@ QMainWindow,
     color: #55c77a;
     font-weight: 700;
 }
+#assetSearch {
+    background-color: #0c131a;
+    color: #d5dde5;
+    border: 1px solid #293642;
+    border-radius: 4px;
+    padding: 7px 10px;
+    min-height: 18px;
+}
+
+#assetSearch:focus {
+    border: 1px solid #3c5263;
+}
+
+#assetFilter {
+    background-color: #0c131a;
+    color: #aeb8c2;
+    border: 1px solid #293642;
+    border-radius: 4px;
+    padding: 6px 10px;
+    min-width: 100px;
+}
+
+#assetFilter:hover {
+    border-color: #3c4c59;
+}
+
+#assetFilter QAbstractItemView {
+    background-color: #111a22;
+    color: #aeb8c2;
+    border: 1px solid #293642;
+    selection-background-color: #1b2a35;
+    selection-color: #e2e8ee;
+}
+
+#assetTable {
+    background-color: #0d141b;
+    color: #aeb8c2;
+    border: 1px solid #202b36;
+    gridline-color: #18232d;
+    selection-background-color: #18252f;
+    selection-color: #e3e9ee;
+}
+
+#assetTable QHeaderView::section {
+    background-color: #111a22;
+    color: #657381;
+    border: none;
+    border-bottom: 1px solid #26323d;
+    padding: 9px 7px;
+    font-size: 8px;
+    font-weight: 700;
+}
 """
