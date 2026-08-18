@@ -473,4 +473,42 @@ QMainWindow,
     font-size: 8px;
     font-weight: 700;
 }
+#alertTable {
+    background-color: #0d141b;
+    color: #aeb8c2;
+    border: 1px solid #202b36;
+    gridline-color: #18232d;
+    selection-background-color: #18252f;
+    selection-color: #e3e9ee;
+}
+
+#alertTable QHeaderView::section {
+    background-color: #111a22;
+    color: #657381;
+    border: none;
+    border-bottom: 1px solid #26323d;
+    padding: 9px 7px;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+#alertDetailPanel {
+    background-color: #10171f;
+    border: 1px solid #202b36;
+    border-radius: 6px;
+}
+
+#alertDetailTitle {
+    color: #dce4eb;
+    font-size: 14px;
+    font-weight: 650;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+#alertDetailInfo {
+    color: #8f9ca8;
+    font-size: 10px;
+    line-height: 1.5;
+}
 """
