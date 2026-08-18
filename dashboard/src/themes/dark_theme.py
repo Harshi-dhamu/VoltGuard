@@ -511,4 +511,23 @@ QMainWindow,
     font-size: 10px;
     line-height: 1.5;
 }
+
+#decisionTable {
+    background-color: #0d141b;
+    color: #aeb8c2;
+    border: 1px solid #202b36;
+    gridline-color: #18232d;
+    selection-background-color: #18252f;
+    selection-color: #e3e9ee;
+}
+
+#decisionTable QHeaderView::section {
+    background-color: #111a22;
+    color: #657381;
+    border: none;
+    border-bottom: 1px solid #26323d;
+    padding: 9px 7px;
+    font-size: 8px;
+    font-weight: 700;
+}
 """
