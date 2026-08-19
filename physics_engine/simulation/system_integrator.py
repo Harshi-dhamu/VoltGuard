@@ -1,13 +1,26 @@
+from telemetry_service import TelemetryService
+
+
 class SystemIntegrator:
     """
     Integrates flow calculation, tank simulation,
-    and safety checking into one system workflow.
+    safety checking, and asset telemetry into
+    one system workflow.
     """
 
-    def __init__(self, flow_calculator, tank_simulator, safety_checker):
+    def __init__(
+        self,
+        flow_calculator,
+        tank_simulator,
+        safety_checker,
+        telemetry_service=None,
+    ):
         self.flow_calculator = flow_calculator
         self.tank_simulator = tank_simulator
         self.safety_checker = safety_checker
+
+        # Keep telemetry service optional for backward compatibility.
+        self.telemetry_service = telemetry_service or TelemetryService()
 
     def run_cycle(
         self,
@@ -43,9 +56,17 @@ class SystemIntegrator:
             tank_level_liters=tank_state["final_level_liters"],
         )
 
-        # Step 4: Combine everything
+        # Step 4: Build structured asset telemetry
+        telemetry_state = self.telemetry_service.build_asset_telemetry(
+            flow_data=flow_state,
+            tank_data=tank_state,
+            safety_data=safety_state,
+        )
+
+        # Step 5: Combine everything
         return {
             "flow": flow_state,
             "tank": tank_state,
             "safety": safety_state,
+            "telemetry": telemetry_state,
         }

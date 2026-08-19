@@ -47,6 +47,9 @@ def main():
     print("\nSafety:")
     print(result["safety"])
 
+    print("\nAsset Telemetry:")
+    print(result["telemetry"])
+
 
 if __name__ == "__main__":
     main()
