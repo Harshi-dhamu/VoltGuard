@@ -13,8 +13,14 @@ from pages.decisions_page import DecisionsPage
 from pages.logs_page import LogsPage
 from pages.overview_page import OverviewPage
 from pages.traffic_page import TrafficPage
+from pages.integration_page import IntegrationPage
+from pages.event_monitor_page import EventMonitorPage
 
 from widgets.sidebar import Sidebar
+
+from integration.application_context import (
+    ApplicationContext,
+)
 
 
 class MainWindow(QMainWindow):
@@ -22,6 +28,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
+
+        self._app_context = ApplicationContext()
 
         self.setWindowTitle(
             "VoltGuard | OT Security Platform"
@@ -40,7 +48,9 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         """Build the application shell."""
+
         central = QWidget()
+
         central.setObjectName(
             "mainContainer"
         )
@@ -56,7 +66,9 @@ class MainWindow(QMainWindow):
             0,
         )
 
-        root_layout.setSpacing(0)
+        root_layout.setSpacing(
+            0
+        )
 
         self.sidebar = Sidebar()
 
@@ -65,6 +77,7 @@ class MainWindow(QMainWindow):
         )
 
         self.page_stack = QStackedWidget()
+
         self.page_stack.setObjectName(
             "pageStack"
         )
@@ -84,6 +97,7 @@ class MainWindow(QMainWindow):
 
     def _register_pages(self) -> None:
         """Create and register all application pages."""
+
         pages = {
             "Overview": OverviewPage,
             "Traffic Monitor": TrafficPage,
@@ -91,10 +105,28 @@ class MainWindow(QMainWindow):
             "Alerts": AlertsPage,
             "Decisions": DecisionsPage,
             "Event Logs": LogsPage,
+            "System Integration": IntegrationPage,
+            "Live Event Monitor": EventMonitorPage,
         }
 
         for name, page_class in pages.items():
-            page = page_class()
+
+            if page_class is IntegrationPage:
+
+                page = page_class(
+                    self._app_context.event_bus,
+                    self._app_context.integration_manager,
+                )
+
+            elif page_class is EventMonitorPage:
+
+                page = page_class(
+                    self._app_context.event_bus,
+                )
+
+            else:
+
+                page = page_class()
 
             self._pages[name] = page
 
@@ -107,7 +139,10 @@ class MainWindow(QMainWindow):
         page_name: str,
     ) -> None:
         """Display the requested page."""
-        page = self._pages.get(page_name)
+
+        page = self._pages.get(
+            page_name
+        )
 
         if page is None:
             return

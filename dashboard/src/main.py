@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import QApplication
 from main_window import MainWindow
 from themes.dark_theme import DARK_THEME
 
-
 def main() -> None:
     """Application entry point."""
     application = QApplication(sys.argv)

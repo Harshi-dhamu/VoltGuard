@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 
 
 class Sidebar(QFrame):
-    """Main navigation sidebar."""
+    """Main navigation sidebar for VoltGuard."""
 
     navigation_requested = pyqtSignal(str)
 
@@ -27,6 +27,8 @@ class Sidebar(QFrame):
         self.set_active_page("Overview")
 
     def _build_ui(self) -> None:
+        """Build the sidebar navigation."""
+
         layout = QVBoxLayout(self)
 
         layout.setContentsMargins(
@@ -38,12 +40,20 @@ class Sidebar(QFrame):
 
         layout.setSpacing(6)
 
+        # -------------------------------------------------
+        # BRANDING
+        # -------------------------------------------------
+
         logo = QLabel("VOLTGUARD")
-        logo.setObjectName("sidebarLogo")
+
+        logo.setObjectName(
+            "sidebarLogo"
+        )
 
         subtitle = QLabel(
             "OT SECURITY PLATFORM"
         )
+
         subtitle.setObjectName(
             "sidebarSubtitle"
         )
@@ -51,7 +61,12 @@ class Sidebar(QFrame):
         layout.addWidget(logo)
         layout.addWidget(subtitle)
 
+        # -------------------------------------------------
+        # TOP SEPARATOR
+        # -------------------------------------------------
+
         separator = QFrame()
+
         separator.setObjectName(
             "sidebarSeparator"
         )
@@ -62,16 +77,143 @@ class Sidebar(QFrame):
         layout.addWidget(separator)
         layout.addSpacing(12)
 
-        navigation_items = [
+        # -------------------------------------------------
+        # MONITORING
+        # -------------------------------------------------
+
+        monitoring_title = QLabel(
+            "MONITORING"
+        )
+
+        monitoring_title.setObjectName(
+            "sidebarSectionTitle"
+        )
+
+        layout.addWidget(
+            monitoring_title
+        )
+
+        monitoring_items = [
             ("▣", "Overview"),
             ("◉", "Traffic Monitor"),
             ("▤", "Assets"),
+        ]
+
+        self._add_navigation_items(
+            layout,
+            monitoring_items,
+        )
+
+        # -------------------------------------------------
+        # SECURITY
+        # -------------------------------------------------
+
+        security_title = QLabel(
+            "SECURITY"
+        )
+
+        security_title.setObjectName(
+            "sidebarSectionTitle"
+        )
+
+        layout.addSpacing(12)
+
+        layout.addWidget(
+            security_title
+        )
+
+        security_items = [
             ("⚠", "Alerts"),
             ("✓", "Decisions"),
             ("≡", "Event Logs"),
         ]
 
-        for icon, text in navigation_items:
+        self._add_navigation_items(
+            layout,
+            security_items,
+        )
+
+        # -------------------------------------------------
+        # INTEGRATION
+        # -------------------------------------------------
+
+        integration_title = QLabel(
+            "INTEGRATION"
+        )
+
+        integration_title.setObjectName(
+            "sidebarSectionTitle"
+        )
+
+        layout.addSpacing(12)
+
+        layout.addWidget(
+            integration_title
+        )
+
+        integration_items = [
+            ("↔", "System Integration"),
+            ("◌", "Live Event Monitor"),
+        ]
+
+        self._add_navigation_items(
+            layout,
+            integration_items,
+        )
+
+        # -------------------------------------------------
+        # BOTTOM SYSTEM STATUS
+        # -------------------------------------------------
+
+        layout.addStretch()
+
+        system_separator = QFrame()
+
+        system_separator.setObjectName(
+            "sidebarSeparator"
+        )
+
+        system_separator.setFixedHeight(1)
+
+        layout.addWidget(
+            system_separator
+        )
+
+        layout.addSpacing(10)
+
+        system_title = QLabel(
+            "SYSTEM"
+        )
+
+        system_title.setObjectName(
+            "sidebarSectionTitle"
+        )
+
+        status = QLabel(
+            "●  Monitoring active"
+        )
+
+        status.setObjectName(
+            "sidebarSystemStatus"
+        )
+
+        layout.addWidget(
+            system_title
+        )
+
+        layout.addWidget(
+            status
+        )
+
+    def _add_navigation_items(
+        self,
+        layout: QVBoxLayout,
+        items: list[tuple[str, str]],
+    ) -> None:
+        """Create and add navigation buttons."""
+
+        for icon, text in items:
+
             button = QPushButton(
                 f"{icon}    {text}"
             )
@@ -92,30 +234,20 @@ class Sidebar(QFrame):
 
             self._buttons[text] = button
 
-            layout.addWidget(button)
-
-        layout.addStretch()
-
-        system_title = QLabel("SYSTEM")
-        system_title.setObjectName(
-            "sidebarSectionTitle"
-        )
-
-        status = QLabel(
-            "●  Monitoring active"
-        )
-        status.setObjectName(
-            "sidebarSystemStatus"
-        )
-
-        layout.addWidget(system_title)
-        layout.addWidget(status)
+            layout.addWidget(
+                button
+            )
 
     def _navigation_clicked(
         self,
         destination: str,
     ) -> None:
-        self.set_active_page(destination)
+        """Handle navigation button clicks."""
+
+        self.set_active_page(
+            destination
+        )
+
         self.navigation_requested.emit(
             destination
         )
@@ -125,12 +257,20 @@ class Sidebar(QFrame):
         page_name: str,
     ) -> None:
         """Update the highlighted navigation item."""
+
         for name, button in self._buttons.items():
+
             button.setProperty(
                 "active",
                 name == page_name,
             )
 
-            button.style().unpolish(button)
-            button.style().polish(button)
+            button.style().unpolish(
+                button
+            )
+
+            button.style().polish(
+                button
+            )
+
             button.update()
