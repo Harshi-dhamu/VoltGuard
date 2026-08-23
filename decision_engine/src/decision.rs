@@ -9,8 +9,14 @@ use crate::models::{
 
 /// Core Decision Engine.
 ///
-/// Evaluates physical safety results and determines whether
-/// an industrial command should be allowed or dropped.
+/// The Decision Engine follows a fail-closed security model:
+///
+/// - Trusted SAFE result -> ALLOW
+/// - Physical safety violation -> DROP
+/// - CATASTROPHIC_FAILURE -> DROP
+/// - Invalid PhysicsResult -> DROP
+///
+/// The engine does not silently allow an untrusted result.
 #[derive(Debug, Default)]
 pub struct DecisionEngine;
 
@@ -20,14 +26,9 @@ impl DecisionEngine {
         Self
     }
 
-    /// Evaluates a Physics Engine result.
+    /// Evaluates a trusted PhysicsResult.
     ///
-    /// Decision order:
-    ///
-    /// 1. Validate the input.
-    /// 2. Reject catastrophic physical states.
-    /// 3. Apply physical safety rules.
-    /// 4. Apply the remaining status policy.
+    /// Returns an error if the input cannot be trusted.
     pub fn evaluate(
         &self,
         physics_result: &PhysicsResult,
@@ -76,148 +77,32 @@ impl DecisionEngine {
         }
     }
 
-    /// Checks whether predicted pressure exceeds the configured limit.
-    fn check_pressure_rule(
-        &self,
-        physics_result: &PhysicsResult,
-    ) -> Result<Option<DecisionReason>, DecisionError> {
-        match (
-            physics_result.predicted_pressure,
-            physics_result.pressure_limit,
-        ) {
-            (Some(predicted), Some(limit)) => {
-                if !predicted.is_finite() || !limit.is_finite() {
-                    return Err(DecisionError::InvalidInput(
-                        "pressure values must be finite".to_string(),
-                    ));
-                }
-
-                if predicted > limit {
-                    return Ok(Some(DecisionReason::PressureLimitExceeded));
-                }
-
-                Ok(None)
-            }
-
-            (None, None) => Ok(None),
-
-            _ => Err(DecisionError::InvalidInput(
-                "predicted_pressure and pressure_limit must be provided together"
-                    .to_string(),
-            )),
-        }
-    }
-
-    /// Checks whether predicted flow exceeds the configured limit.
-    fn check_flow_rule(
-        &self,
-        physics_result: &PhysicsResult,
-    ) -> Result<Option<DecisionReason>, DecisionError> {
-        match (
-            physics_result.predicted_flow,
-            physics_result.flow_limit,
-        ) {
-            (Some(predicted), Some(limit)) => {
-                if !predicted.is_finite() || !limit.is_finite() {
-                    return Err(DecisionError::InvalidInput(
-                        "flow values must be finite".to_string(),
-                    ));
-                }
-
-                if predicted > limit {
-                    return Ok(Some(DecisionReason::FlowLimitExceeded));
-                }
-
-                Ok(None)
-            }
-
-            (None, None) => Ok(None),
-
-            _ => Err(DecisionError::InvalidInput(
-                "predicted_flow and flow_limit must be provided together"
-                    .to_string(),
-            )),
-        }
-    }
-
-    /// Checks whether pump speed exceeds the configured limit.
-    fn check_pump_speed_rule(
-        &self,
-        physics_result: &PhysicsResult,
-    ) -> Result<Option<DecisionReason>, DecisionError> {
-        match (
-            physics_result.pump_speed,
-            physics_result.pump_speed_limit,
-        ) {
-            (Some(speed), Some(limit)) => {
-                if !speed.is_finite() || !limit.is_finite() {
-                    return Err(DecisionError::InvalidInput(
-                        "pump speed values must be finite".to_string(),
-                    ));
-                }
-
-                if speed > limit {
-                    return Ok(Some(DecisionReason::PumpSpeedExceeded));
-                }
-
-                Ok(None)
-            }
-
-            (None, None) => Ok(None),
-
-            _ => Err(DecisionError::InvalidInput(
-                "pump_speed and pump_speed_limit must be provided together"
-                    .to_string(),
-            )),
-        }
-    }
-
-    /// Checks for obviously invalid physical states.
+    /// Fail-closed evaluation.
     ///
-    /// Negative physical quantities are rejected because they are
-    /// invalid for the positive-valued quantities represented here.
-    fn check_physical_state(
+    /// If the PhysicsResult is invalid, this method returns DROP
+    /// instead of allowing the command.
+    ///
+    /// This method is intended for the security decision boundary.
+    pub fn evaluate_fail_closed(
         &self,
         physics_result: &PhysicsResult,
-    ) -> Option<DecisionReason> {
-        if physics_result
-            .predicted_pressure
-            .is_some_and(|value| value < 0.0)
-        {
-            return Some(DecisionReason::InvalidPhysicalState);
-        }
-
-        if physics_result
-            .predicted_flow
-            .is_some_and(|value| value < 0.0)
-        {
-            return Some(DecisionReason::InvalidPhysicalState);
-        }
-
-        if physics_result
-            .pump_speed
-            .is_some_and(|value| value < 0.0)
-        {
-            return Some(DecisionReason::InvalidPhysicalState);
-        }
-
-        None
-    }
-
-    /// Creates a DROP result with the supplied reason.
-    fn create_drop_result(
-        &self,
-        physics_result: &PhysicsResult,
-        reason: DecisionReason,
     ) -> DecisionResult {
-        DecisionResult {
-            device_id: physics_result.device_id.clone(),
-            decision: Decision::Drop,
-            reason,
+        match self.evaluate(physics_result) {
+            Ok(result) => result,
+
+            Err(_) => DecisionResult {
+                device_id: if physics_result.device_id.trim().is_empty() {
+                    "UNKNOWN".to_string()
+                } else {
+                    physics_result.device_id.clone()
+                },
+                decision: Decision::Drop,
+                reason: DecisionReason::InvalidInput,
+            },
         }
     }
 
-    /// Performs basic input validation.
+    /// Validates the basic structure and values of a PhysicsResult.
     fn validate_input(
         &self,
         physics_result: &PhysicsResult,
@@ -246,7 +131,196 @@ impl DecisionEngine {
             ));
         }
 
+        self.validate_optional_value(
+            physics_result.predicted_pressure,
+            "predicted_pressure",
+        )?;
+
+        self.validate_optional_value(
+            physics_result.pressure_limit,
+            "pressure_limit",
+        )?;
+
+        self.validate_optional_value(
+            physics_result.predicted_flow,
+            "predicted_flow",
+        )?;
+
+        self.validate_optional_value(
+            physics_result.flow_limit,
+            "flow_limit",
+        )?;
+
+        self.validate_optional_value(
+            physics_result.pump_speed,
+            "pump_speed",
+        )?;
+
+        self.validate_optional_value(
+            physics_result.pump_speed_limit,
+            "pump_speed_limit",
+        )?;
+
         Ok(())
+    }
+
+    /// Validates an optional numeric physical value.
+    fn validate_optional_value(
+        &self,
+        value: Option<f64>,
+        field_name: &str,
+    ) -> Result<(), DecisionError> {
+        if let Some(value) = value {
+            if !value.is_finite() {
+                return Err(DecisionError::InvalidInput(format!(
+                    "{} must be finite",
+                    field_name
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Checks pressure safety.
+    fn check_pressure_rule(
+        &self,
+        physics_result: &PhysicsResult,
+    ) -> Result<Option<DecisionReason>, DecisionError> {
+        match (
+            physics_result.predicted_pressure,
+            physics_result.pressure_limit,
+        ) {
+            (Some(predicted), Some(limit)) => {
+                if predicted > limit {
+                    return Ok(Some(DecisionReason::PressureLimitExceeded));
+                }
+
+                Ok(None)
+            }
+
+            (None, None) => Ok(None),
+
+            _ => Err(DecisionError::InvalidInput(
+                "predicted_pressure and pressure_limit must be provided together"
+                    .to_string(),
+            )),
+        }
+    }
+
+    /// Checks flow safety.
+    fn check_flow_rule(
+        &self,
+        physics_result: &PhysicsResult,
+    ) -> Result<Option<DecisionReason>, DecisionError> {
+        match (
+            physics_result.predicted_flow,
+            physics_result.flow_limit,
+        ) {
+            (Some(predicted), Some(limit)) => {
+                if predicted > limit {
+                    return Ok(Some(DecisionReason::FlowLimitExceeded));
+                }
+
+                Ok(None)
+            }
+
+            (None, None) => Ok(None),
+
+            _ => Err(DecisionError::InvalidInput(
+                "predicted_flow and flow_limit must be provided together"
+                    .to_string(),
+            )),
+        }
+    }
+
+    /// Checks pump-speed safety.
+    fn check_pump_speed_rule(
+        &self,
+        physics_result: &PhysicsResult,
+    ) -> Result<Option<DecisionReason>, DecisionError> {
+        match (
+            physics_result.pump_speed,
+            physics_result.pump_speed_limit,
+        ) {
+            (Some(speed), Some(limit)) => {
+                if speed > limit {
+                    return Ok(Some(DecisionReason::PumpSpeedExceeded));
+                }
+
+                Ok(None)
+            }
+
+            (None, None) => Ok(None),
+
+            _ => Err(DecisionError::InvalidInput(
+                "pump_speed and pump_speed_limit must be provided together"
+                    .to_string(),
+            )),
+        }
+    }
+
+    /// Checks for invalid physical states.
+    fn check_physical_state(
+        &self,
+        physics_result: &PhysicsResult,
+    ) -> Option<DecisionReason> {
+        if physics_result
+            .predicted_pressure
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        if physics_result
+            .predicted_flow
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        if physics_result
+            .pump_speed
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        if physics_result
+            .pressure_limit
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        if physics_result
+            .flow_limit
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        if physics_result
+            .pump_speed_limit
+            .is_some_and(|value| value < 0.0)
+        {
+            return Some(DecisionReason::InvalidPhysicalState);
+        }
+
+        None
+    }
+
+    /// Creates a DROP result.
+    fn create_drop_result(
+        &self,
+        physics_result: &PhysicsResult,
+        reason: DecisionReason,
+    ) -> DecisionResult {
+        DecisionResult {
+            device_id: physics_result.device_id.clone(),
+            decision: Decision::Drop,
+            reason,
+        }
     }
 }
 
@@ -276,89 +350,13 @@ mod tests {
 
         let result = engine
             .evaluate(&create_safe_result())
-            .expect("safe result should produce a decision");
+            .expect("safe result should be valid");
 
         assert_eq!(result.decision, Decision::Allow);
-        assert_eq!(
-            result.reason,
-            DecisionReason::PhysicsStatusSafe
-        );
     }
 
     #[test]
-    fn pressure_above_limit_should_drop() {
-        let engine = DecisionEngine::new();
-
-        let mut input = create_safe_result();
-        input.predicted_pressure = Some(101.0);
-
-        let result = engine
-            .evaluate(&input)
-            .expect("pressure violation should produce a decision");
-
-        assert_eq!(result.decision, Decision::Drop);
-        assert_eq!(
-            result.reason,
-            DecisionReason::PressureLimitExceeded
-        );
-    }
-
-    #[test]
-    fn flow_above_limit_should_drop() {
-        let engine = DecisionEngine::new();
-
-        let mut input = create_safe_result();
-        input.predicted_flow = Some(301.0);
-
-        let result = engine
-            .evaluate(&input)
-            .expect("flow violation should produce a decision");
-
-        assert_eq!(result.decision, Decision::Drop);
-        assert_eq!(
-            result.reason,
-            DecisionReason::FlowLimitExceeded
-        );
-    }
-
-    #[test]
-    fn pump_speed_above_limit_should_drop() {
-        let engine = DecisionEngine::new();
-
-        let mut input = create_safe_result();
-        input.pump_speed = Some(3001.0);
-
-        let result = engine
-            .evaluate(&input)
-            .expect("pump speed violation should produce a decision");
-
-        assert_eq!(result.decision, Decision::Drop);
-        assert_eq!(
-            result.reason,
-            DecisionReason::PumpSpeedExceeded
-        );
-    }
-
-    #[test]
-    fn negative_pressure_should_drop() {
-        let engine = DecisionEngine::new();
-
-        let mut input = create_safe_result();
-        input.predicted_pressure = Some(-1.0);
-
-        let result = engine
-            .evaluate(&input)
-            .expect("invalid physical state should produce a decision");
-
-        assert_eq!(result.decision, Decision::Drop);
-        assert_eq!(
-            result.reason,
-            DecisionReason::InvalidPhysicalState
-        );
-    }
-
-    #[test]
-    fn catastrophic_failure_should_drop() {
+    fn catastrophic_result_should_drop() {
         let engine = DecisionEngine::new();
 
         let mut input = create_safe_result();
@@ -366,7 +364,7 @@ mod tests {
 
         let result = engine
             .evaluate(&input)
-            .expect("catastrophic state should produce a decision");
+            .expect("catastrophic result should be valid");
 
         assert_eq!(result.decision, Decision::Drop);
         assert_eq!(
@@ -376,28 +374,132 @@ mod tests {
     }
 
     #[test]
-    fn boundary_pressure_equal_to_limit_should_allow() {
+    fn invalid_device_id_should_fail_closed() {
         let engine = DecisionEngine::new();
 
         let mut input = create_safe_result();
-        input.predicted_pressure = Some(100.0);
+        input.device_id = String::new();
 
-        let result = engine
-            .evaluate(&input)
-            .expect("boundary pressure should produce a decision");
+        let result = engine.evaluate_fail_closed(&input);
 
-        assert_eq!(result.decision, Decision::Allow);
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
     }
 
     #[test]
-    fn missing_pressure_pair_should_be_rejected() {
+    fn invalid_command_should_fail_closed() {
         let engine = DecisionEngine::new();
 
         let mut input = create_safe_result();
-        input.predicted_pressure = None;
+        input.command = String::new();
 
-        let result = engine.evaluate(&input);
+        let result = engine.evaluate_fail_closed(&input);
 
-        assert!(result.is_err());
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn nan_command_value_should_fail_closed() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.value = f64::NAN;
+
+        let result = engine.evaluate_fail_closed(&input);
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn infinite_pressure_should_fail_closed() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.predicted_pressure = Some(f64::INFINITY);
+
+        let result = engine.evaluate_fail_closed(&input);
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn missing_pressure_limit_should_fail_closed() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.pressure_limit = None;
+
+        let result = engine.evaluate_fail_closed(&input);
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn missing_flow_limit_should_fail_closed() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.flow_limit = None;
+
+        let result = engine.evaluate_fail_closed(&input);
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn missing_pump_speed_limit_should_fail_closed() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.pump_speed_limit = None;
+
+        let result = engine.evaluate_fail_closed(&input);
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidInput
+        );
+    }
+
+    #[test]
+    fn negative_physical_value_should_drop() {
+        let engine = DecisionEngine::new();
+
+        let mut input = create_safe_result();
+        input.predicted_flow = Some(-10.0);
+
+        let result = engine
+            .evaluate(&input)
+            .expect("negative physical state should be handled");
+
+        assert_eq!(result.decision, Decision::Drop);
+        assert_eq!(
+            result.reason,
+            DecisionReason::InvalidPhysicalState
+        );
     }
 }

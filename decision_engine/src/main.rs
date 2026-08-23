@@ -8,14 +8,18 @@ use decision::DecisionEngine;
 use models::PhysicsResult;
 
 fn main() {
-    if let Err(error) = run() {
-        eprintln!("Decision Engine error: {}", error);
-        std::process::exit(1);
-    }
+    let exit_code = match run() {
+        Ok(()) => 0,
+        Err(error) => {
+            eprintln!("Decision Engine error: {}", error);
+            1
+        }
+    };
+
+    std::process::exit(exit_code);
 }
 
-/// Reads a PhysicsResult from stdin, evaluates it,
-/// and writes the DecisionResult as JSON to stdout.
+/// Reads PhysicsResult JSON from stdin and produces a DecisionResult JSON.
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
 
@@ -29,7 +33,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let engine = DecisionEngine::new();
 
-    let decision_result = engine.evaluate(&physics_result)?;
+    let decision_result = engine.evaluate_fail_closed(&physics_result);
 
     let output = serde_json::to_string_pretty(&decision_result)?;
 
