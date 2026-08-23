@@ -2,47 +2,38 @@ mod decision;
 mod error;
 mod models;
 
-use decision::DecisionEngine;
-use models::PhysicsResult;
 use std::io::{self, Read};
 
+use decision::DecisionEngine;
+use models::PhysicsResult;
+
 fn main() {
+    if let Err(error) = run() {
+        eprintln!("Decision Engine error: {}", error);
+        std::process::exit(1);
+    }
+}
+
+/// Reads a PhysicsResult from stdin, evaluates it,
+/// and writes the DecisionResult as JSON to stdout.
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
 
-    if let Err(error) = io::stdin().read_to_string(&mut input) {
-        eprintln!("Failed to read input: {error}");
-        std::process::exit(1);
-    }
+    io::stdin().read_to_string(&mut input)?;
 
     if input.trim().is_empty() {
-        eprintln!("No JSON input received.");
-        std::process::exit(1);
+        return Err("input JSON cannot be empty".into());
     }
 
-    let physics_result: PhysicsResult = match serde_json::from_str(&input) {
-        Ok(result) => result,
-        Err(error) => {
-            eprintln!("Invalid JSON input: {error}");
-            std::process::exit(1);
-        }
-    };
+    let physics_result: PhysicsResult = serde_json::from_str(&input)?;
 
     let engine = DecisionEngine::new();
 
-    match engine.evaluate(&physics_result) {
-        Ok(decision) => {
-            match serde_json::to_string_pretty(&decision) {
-                Ok(json) => println!("{json}"),
-                Err(error) => {
-                    eprintln!("Failed to serialize decision: {error}");
-                    std::process::exit(1);
-                }
-            }
-        }
+    let decision_result = engine.evaluate(&physics_result)?;
 
-        Err(error) => {
-            eprintln!("Decision Engine error: {error}");
-            std::process::exit(1);
-        }
-    }
+    let output = serde_json::to_string_pretty(&decision_result)?;
+
+    println!("{}", output);
+
+    Ok(())
 }
