@@ -15,7 +15,7 @@ from pages.overview_page import OverviewPage
 from pages.traffic_page import TrafficPage
 from pages.integration_page import IntegrationPage
 from pages.event_monitor_page import EventMonitorPage
-
+from pages.incidents_page import IncidentsPage
 from widgets.sidebar import Sidebar
 
 from integration.application_context import (
@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
             "Alerts": AlertsPage,
             "Decisions": DecisionsPage,
             "Event Logs": LogsPage,
+            "Incident Center": IncidentsPage,
             "System Integration": IntegrationPage,
             "Live Event Monitor": EventMonitorPage,
         }

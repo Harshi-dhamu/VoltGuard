@@ -126,6 +126,7 @@ class Sidebar(QFrame):
             ("⚠", "Alerts"),
             ("✓", "Decisions"),
             ("≡", "Event Logs"),
+            ("◆", "Incident Center"),
         ]
 
         self._add_navigation_items(
