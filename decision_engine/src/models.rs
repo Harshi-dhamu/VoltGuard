@@ -15,6 +15,10 @@ pub struct PhysicsResult {
     pub pressure_limit: Option<f64>,
 
     pub predicted_flow: Option<f64>,
+    pub flow_limit: Option<f64>,
+
+    pub pump_speed: Option<f64>,
+    pub pump_speed_limit: Option<f64>,
 
     pub status: PhysicsStatus,
 }
