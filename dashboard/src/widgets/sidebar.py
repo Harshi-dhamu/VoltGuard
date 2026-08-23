@@ -128,6 +128,7 @@ class Sidebar(QFrame):
             ("≡", "Event Logs"),
             ("◆", "Incident Center"),
             ("▥", "Security Analytics"),
+            ("◇", "Security Policies")
         ]
 
         self._add_navigation_items(
