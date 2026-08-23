@@ -17,6 +17,7 @@ from pages.integration_page import IntegrationPage
 from pages.event_monitor_page import EventMonitorPage
 from pages.incidents_page import IncidentsPage
 from widgets.sidebar import Sidebar
+from pages.analytics_page import AnalyticsPage
 
 from integration.application_context import (
     ApplicationContext,
@@ -106,6 +107,7 @@ class MainWindow(QMainWindow):
             "Decisions": DecisionsPage,
             "Event Logs": LogsPage,
             "Incident Center": IncidentsPage,
+            "Security Analytics": AnalyticsPage,
             "System Integration": IntegrationPage,
             "Live Event Monitor": EventMonitorPage,
         }
