@@ -6,45 +6,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from physics_engine.simulation.telemetry_service import TelemetryService
-
-
-def build_health_summary(telemetry_data):
-    """
-    Create a dashboard-friendly health summary
-    from structured asset telemetry.
-    """
-
-    assets = telemetry_data.get("assets", {})
-
-    summary = {
-        "system_status": telemetry_data.get("system_status", "UNKNOWN"),
-        "total_assets": len(assets),
-        "normal_assets": 0,
-        "warning_assets": 0,
-        "critical_assets": 0,
-        "assets": {},
-    }
-
-    for asset_id, asset_data in assets.items():
-        status = asset_data.get("health_status", "UNKNOWN")
-
-        if status == "NORMAL":
-            summary["normal_assets"] += 1
-        elif status == "WARNING":
-            summary["warning_assets"] += 1
-        elif status == "CRITICAL":
-            summary["critical_assets"] += 1
-
-        summary["assets"][asset_id] = {
-            "asset_type": asset_data.get("asset_type", "UNKNOWN"),
-            "health_status": status,
-        }
-
-    return summary
+from physics_engine.simulation.health_summary_service import HealthSummaryService
 
 
 def main():
     service = TelemetryService()
+    health_summary_service = HealthSummaryService()
 
     flow_data = {
         "pump_speed_rpm": 2500,
@@ -73,7 +40,9 @@ def main():
         safety_data=safety_data,
     )
 
-    health_summary = build_health_summary(telemetry)
+    health_summary = health_summary_service.build_health_summary(
+        telemetry
+    )
 
     print("=== VoltGuard Asset Health Summary Test ===")
     print()
@@ -81,18 +50,10 @@ def main():
     print(health_summary)
 
     print()
-    print(
-        f"Total Assets: {health_summary['total_assets']}"
-    )
-    print(
-        f"Normal Assets: {health_summary['normal_assets']}"
-    )
-    print(
-        f"Warning Assets: {health_summary['warning_assets']}"
-    )
-    print(
-        f"Critical Assets: {health_summary['critical_assets']}"
-    )
+    print(f"Total Assets: {health_summary['total_assets']}")
+    print(f"Normal Assets: {health_summary['normal_assets']}")
+    print(f"Warning Assets: {health_summary['warning_assets']}")
+    print(f"Critical Assets: {health_summary['critical_assets']}")
 
 
 if __name__ == "__main__":
