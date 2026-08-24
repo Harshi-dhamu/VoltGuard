@@ -1,4 +1,5 @@
 from telemetry_service import TelemetryService
+from health_summary_service import HealthSummaryService
 
 
 class SystemIntegrator:
@@ -21,6 +22,7 @@ class SystemIntegrator:
 
         # Keep telemetry service optional for backward compatibility.
         self.telemetry_service = telemetry_service or TelemetryService()
+        self.health_summary_service = HealthSummaryService()
 
     def run_cycle(
         self,
@@ -63,10 +65,16 @@ class SystemIntegrator:
             safety_data=safety_state,
         )
 
-        # Step 5: Combine everything
+        # Step 5: Build health summary
+        health_summary = self.health_summary_service.build_health_summary(
+            telemetry_data=telemetry_state,
+        )
+
+        # Step 6: Combine everything
         return {
             "flow": flow_state,
             "tank": tank_state,
             "safety": safety_state,
             "telemetry": telemetry_state,
+            "health_summary": health_summary,
         }
