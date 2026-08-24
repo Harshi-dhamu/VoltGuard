@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from data.integration_data import IntegrationEvent
+from data.integration_event import IntegrationEvent
 
 from integration.adapters import (
     DecisionEngineAdapter,
@@ -223,7 +223,7 @@ class IntegrationPage(BasePage):
 
         # Send the normalized event through the
         # shared EventBus.
-        self._event_bus.publish(
+        self._integration_manager.receive_event(
             event
         )
 

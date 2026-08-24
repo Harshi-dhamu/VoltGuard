@@ -1,85 +1,132 @@
 from typing import Any, Dict
 
-from data.integration_data import (
-    IntegrationEvent,
-)
+from data.integration_event import IntegrationEvent
 
 
-class ModuleAdapter:
-    """
-    Base adapter for external VoltGuard modules.
-
-    External modules should communicate through
-    this boundary instead of directly manipulating
-    dashboard widgets.
-    """
-
-    module_name = "Unknown Module"
+class PacketInterceptorAdapter:
+    """Normalize Packet Interceptor output into VoltGuard events."""
 
     def normalize(
         self,
         data: Dict[str, Any],
     ) -> IntegrationEvent:
-        """
-        Convert external module output into
-        a standard VoltGuard event.
-        """
-
-        raise NotImplementedError
-
-
-class PacketInterceptorAdapter(
-    ModuleAdapter
-):
-    """Adapter for Tanvi's Packet Interceptor."""
-
-    module_name = "Packet Interceptor"
-
-    def normalize(
-        self,
-        data: Dict[str, Any],
-    ) -> IntegrationEvent:
+        """Convert packet interceptor data into an IntegrationEvent."""
 
         return IntegrationEvent.create(
-            event_type="packet",
-            source_module=self.module_name,
+            event_id=(
+                f"PKT-"
+                f"{data.get('source_ip', 'UNKNOWN')}-"
+                f"{data.get('packet_size', 0)}"
+            ),
+            source_module="packet_interceptor",
+            event_type="NETWORK_ANOMALY",
+            severity=data.get(
+                "severity",
+                "HIGH",
+            ),
+            asset=data.get(
+                "asset",
+                "Network Segment",
+            ),
+            message=(
+                "Suspicious network traffic detected"
+            ),
             payload=data,
         )
 
 
-class PhysicsEngineAdapter(
-    ModuleAdapter
-):
-    """Adapter for Dhruti's Physics Engine."""
-
-    module_name = "Physics Engine"
+class PhysicsEngineAdapter:
+    """Normalize Physics Engine output into VoltGuard events."""
 
     def normalize(
         self,
         data: Dict[str, Any],
     ) -> IntegrationEvent:
+        """Convert physics engine data into an IntegrationEvent."""
+
+        anomaly_score = float(
+            data.get(
+                "anomaly_score",
+                0.0,
+            )
+        )
+
+        severity = (
+            "CRITICAL"
+            if anomaly_score >= 0.90
+            else "HIGH"
+            if anomaly_score >= 0.70
+            else "MEDIUM"
+        )
 
         return IntegrationEvent.create(
-            event_type="threat",
-            source_module=self.module_name,
+            event_id=(
+                f"PHY-"
+                f"{data.get('asset', 'UNKNOWN')}-"
+                f"{int(anomaly_score * 100)}"
+            ),
+            source_module="physics_engine",
+            event_type="PROCESS_ANOMALY",
+            severity=data.get(
+                "severity",
+                severity,
+            ),
+            asset=data.get(
+                "asset",
+                "Unknown Asset",
+            ),
+            message=(
+                "Abnormal process behaviour detected"
+            ),
             payload=data,
         )
 
 
-class DecisionEngineAdapter(
-    ModuleAdapter
-):
-    """Adapter for Akhina's Decision Engine."""
-
-    module_name = "Decision Engine"
+class DecisionEngineAdapter:
+    """Normalize Decision Engine output into VoltGuard events."""
 
     def normalize(
         self,
         data: Dict[str, Any],
     ) -> IntegrationEvent:
+        """Convert decision engine data into an IntegrationEvent."""
+
+        decision = str(
+            data.get(
+                "decision",
+                "UNKNOWN",
+            )
+        ).upper()
+
+        severity = str(
+            data.get(
+                "severity",
+                "MEDIUM",
+            )
+        ).upper()
 
         return IntegrationEvent.create(
-            event_type="decision",
-            source_module=self.module_name,
+            event_id=(
+                f"DEC-"
+                f"{data.get('asset', 'UNKNOWN')}-"
+                f"{decision}"
+            ),
+            source_module="decision_engine",
+            event_type="SECURITY_DECISION",
+            severity=severity,
+            asset=data.get(
+                "asset",
+                "Unknown Asset",
+            ),
+            message=(
+                f"Security decision: {decision}"
+            ),
             payload=data,
         )
+
+
+__all__ = [
+    "PacketInterceptorAdapter",
+    "PhysicsEngineAdapter",
+    "DecisionEngineAdapter",
+]

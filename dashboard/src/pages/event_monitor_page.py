@@ -1,24 +1,17 @@
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
 
 from data.event_log import EventLog
-
-from data.integration_data import (
-    IntegrationEvent,
-)
+from data.integration_event import IntegrationEvent
 
 from integration.event_bus import EventBus
 
-from widgets.event_monitor import (
-    EventMonitor,
-)
+from widgets.event_monitor import EventMonitor
 
 from .base_page import BasePage
 
@@ -167,18 +160,7 @@ class EventMonitorPage(BasePage):
         """Subscribe to all integration events."""
 
         self._event_bus.subscribe(
-            "packet",
-            self._handle_event,
-        )
-
-        self._event_bus.subscribe(
-            "threat",
-            self._handle_event,
-        )
-
-        self._event_bus.subscribe(
-            "decision",
-            self._handle_event,
+            self._handle_event
         )
 
     def _handle_event(
@@ -187,10 +169,14 @@ class EventMonitorPage(BasePage):
     ) -> None:
         """Process an incoming event."""
 
-        entry = (
-            self._event_log.add_event(
-                event
-            )
+        if not isinstance(
+            event,
+            IntegrationEvent,
+        ):
+            return
+
+        entry = self._event_log.add_event(
+            event
         )
 
         self._table.insertRow(
