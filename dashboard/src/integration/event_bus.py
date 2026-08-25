@@ -1,4 +1,5 @@
 from typing import Callable, List, Optional
+import traceback
 
 from data.integration_event import IntegrationEvent
 
@@ -7,15 +8,11 @@ class EventBus:
     """
     Shared event bus for VoltGuard.
 
-    Supports both:
+    Supports:
         subscribe(callback)
 
-    and the older:
+    and:
         subscribe(event_type, callback)
-
-    This keeps the existing dashboard pages compatible
-    while allowing the new integration architecture to
-    use the same event bus.
     """
 
     def __init__(self) -> None:
@@ -31,20 +28,10 @@ class EventBus:
         event_type_or_callback,
         callback=None,
     ) -> None:
-        """
-        Register an event listener.
-
-        Supported forms:
-
-        subscribe(callback)
-
-        subscribe(event_type, callback)
-        """
 
         if callback is None:
             event_type = None
             subscriber = event_type_or_callback
-
         else:
             event_type = str(
                 event_type_or_callback
@@ -62,29 +49,17 @@ class EventBus:
         )
 
         if entry not in self._subscribers:
-            self._subscribers.append(
-                entry
-            )
+            self._subscribers.append(entry)
 
     def unsubscribe(
         self,
         event_type_or_callback,
         callback=None,
     ) -> None:
-        """
-        Remove an event listener.
-
-        Supports:
-
-        unsubscribe(callback)
-
-        unsubscribe(event_type, callback)
-        """
 
         if callback is None:
             event_type = None
             subscriber = event_type_or_callback
-
         else:
             event_type = str(
                 event_type_or_callback
@@ -97,17 +72,12 @@ class EventBus:
         )
 
         if entry in self._subscribers:
-            self._subscribers.remove(
-                entry
-            )
+            self._subscribers.remove(entry)
 
     def publish(
         self,
         event: IntegrationEvent,
     ) -> None:
-        """
-        Publish an event to matching subscribers.
-        """
 
         for (
             subscribed_type,
@@ -126,13 +96,28 @@ class EventBus:
 
             except Exception as exc:
                 print(
-                    "Event subscriber error:",
-                    exc,
+                    "\n========== EVENT SUBSCRIBER ERROR =========="
+                )
+
+                print(
+                    f"Subscriber: {subscriber}"
+                )
+
+                print(
+                    f"Event: {event.event_type}"
+                )
+
+                print(
+                    f"Error: {exc}"
+                )
+
+                traceback.print_exc()
+
+                print(
+                    "============================================\n"
                 )
 
     def subscriber_count(self) -> int:
-        """Return the number of active subscribers."""
-
         return len(
             self._subscribers
         )

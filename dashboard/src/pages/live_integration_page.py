@@ -7,9 +7,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from data.integration_event import (
-    IntegrationEvent,
-)
+from data.integration_event import IntegrationEvent
 
 from widgets.live_integration_panel import (
     LiveIntegrationPanel,
@@ -32,51 +30,39 @@ class LiveIntegrationPage(BasePage):
             parent,
         )
 
-        self._manager = (
-            integration_manager
-        )
-
+        self._manager = integration_manager
         self._event_number = 0
 
         self._build_content()
 
+        # Subscribe to the shared integration event bus.
         self._manager.event_bus.subscribe(
             self._handle_event
         )
 
-        self._timer = QTimer(
-            self
-        )
+        # Development timer.
+        self._timer = QTimer(self)
 
         self._timer.timeout.connect(
             self._simulate_integration_event
         )
 
-        self._timer.start(
-            7000
-        )
+        self._timer.start(7000)
 
     def _build_content(self) -> None:
-        """Build integration dashboard."""
+        """Build the live integration dashboard."""
 
         self._add_control_bar()
-
         self._add_module_panel()
-
         self._add_runtime_panel()
 
     def _add_control_bar(self) -> None:
-        """Add integration controls."""
+        """Create the integration control bar."""
 
         frame = QFrame()
+        frame.setObjectName("panel")
 
-        frame.setObjectName(
-            "panel"
-        )
-
-        layout = QHBoxLayout(
-            frame
-        )
+        layout = QHBoxLayout(frame)
 
         layout.setContentsMargins(
             14,
@@ -84,6 +70,8 @@ class LiveIntegrationPage(BasePage):
             14,
             10,
         )
+
+        layout.setSpacing(12)
 
         title = QLabel(
             "LIVE INTEGRATION"
@@ -93,9 +81,7 @@ class LiveIntegrationPage(BasePage):
             "panelTitle"
         )
 
-        layout.addWidget(
-            title
-        )
+        layout.addWidget(title)
 
         layout.addStretch()
 
@@ -127,12 +113,10 @@ class LiveIntegrationPage(BasePage):
             simulate_button
         )
 
-        self.add_content(
-            frame
-        )
+        self.add_content(frame)
 
     def _add_module_panel(self) -> None:
-        """Add module connectivity panel."""
+        """Create the module connectivity panel."""
 
         title = QLabel(
             "MODULE CONNECTIVITY"
@@ -142,30 +126,21 @@ class LiveIntegrationPage(BasePage):
             "panelTitle"
         )
 
-        self.add_content(
-            title
-        )
+        self.add_content(title)
 
-        self._module_panel = (
-            LiveIntegrationPanel()
-        )
+        self._module_panel = LiveIntegrationPanel()
 
         self.add_content(
             self._module_panel
         )
 
     def _add_runtime_panel(self) -> None:
-        """Add latest event information."""
+        """Create the latest event information panel."""
 
         frame = QFrame()
+        frame.setObjectName("panel")
 
-        frame.setObjectName(
-            "panel"
-        )
-
-        layout = QVBoxLayout(
-            frame
-        )
+        layout = QVBoxLayout(frame)
 
         layout.setContentsMargins(
             16,
@@ -173,6 +148,8 @@ class LiveIntegrationPage(BasePage):
             16,
             16,
         )
+
+        layout.setSpacing(10)
 
         title = QLabel(
             "LATEST INTEGRATION EVENT"
@@ -182,9 +159,7 @@ class LiveIntegrationPage(BasePage):
             "panelTitle"
         )
 
-        layout.addWidget(
-            title
-        )
+        layout.addWidget(title)
 
         self._latest_event = QLabel(
             "Waiting for module events..."
@@ -202,9 +177,7 @@ class LiveIntegrationPage(BasePage):
             self._latest_event
         )
 
-        self.add_content(
-            frame
-        )
+        self.add_content(frame)
 
     def _simulate_integration_event(
         self,
@@ -213,9 +186,7 @@ class LiveIntegrationPage(BasePage):
 
         self._event_number += 1
 
-        cycle = (
-            self._event_number % 3
-        )
+        cycle = self._event_number % 3
 
         if cycle == 1:
 
@@ -285,25 +256,27 @@ class LiveIntegrationPage(BasePage):
                 payload={
                     "decision": "BLOCK",
                     "confidence": 95,
-                    "reason": (
-                        "Policy violation"
-                    ),
+                    "reason": "Policy violation",
                 },
             )
 
-        self._manager.receive_event(
-            event
-        )
+        self._manager.receive_event(event)
 
     def _handle_event(
         self,
         event: IntegrationEvent,
     ) -> None:
-        """Update the interface when an event arrives."""
+        """Update the page when an integration event arrives."""
+
+        status = self._manager.get_status()
+
+        total_events = status.get(
+            "total_events",
+            0,
+        )
 
         self._event_counter.setText(
-            f"Events: "
-            f"{self._manager.get_status()['total_events']}"
+            f"Events: {total_events}"
         )
 
         self._latest_event.setText(

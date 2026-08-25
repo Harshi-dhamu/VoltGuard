@@ -22,6 +22,9 @@ from pages.live_integration_page import LiveIntegrationPage
 from pages.logs_page import LogsPage
 from pages.overview_page import OverviewPage
 from pages.policies_page import PoliciesPage
+from pages.security_operations_page import (
+    SecurityOperationsPage,
+)
 from pages.traffic_page import TrafficPage
 
 from widgets.sidebar import Sidebar
@@ -33,9 +36,12 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
 
-        # One shared application context.
-        # This provides one EventBus and one
-        # IntegrationManager for the entire dashboard.
+        # ======================================================
+        # SHARED APPLICATION CONTEXT
+        # ======================================================
+
+        # One EventBus and one IntegrationManager are
+        # shared by the complete dashboard.
         self._app_context = ApplicationContext()
 
         self.setWindowTitle(
@@ -47,11 +53,22 @@ class MainWindow(QMainWindow):
             780,
         )
 
-        self._pages: Dict[str, QWidget] = {}
+        self._pages: Dict[
+            str,
+            QWidget,
+        ] = {}
 
         self._build_ui()
+
         self._register_pages()
-        self._show_page("Overview")
+
+        self._show_page(
+            "Overview"
+        )
+
+    # ==========================================================
+    # UI
+    # ==========================================================
 
     def _build_ui(self) -> None:
         """Build the main application shell."""
@@ -77,14 +94,20 @@ class MainWindow(QMainWindow):
             0
         )
 
-        # Main sidebar.
+        # ======================================================
+        # SIDEBAR
+        # ======================================================
+
         self.sidebar = Sidebar()
 
         self.sidebar.navigation_requested.connect(
             self._show_page
         )
 
-        # Main page container.
+        # ======================================================
+        # PAGE STACK
+        # ======================================================
+
         self.page_stack = QStackedWidget()
 
         self.page_stack.setObjectName(
@@ -104,27 +127,64 @@ class MainWindow(QMainWindow):
             central
         )
 
+    # ==========================================================
+    # PAGE REGISTRATION
+    # ==========================================================
+
     def _register_pages(self) -> None:
         """Create and register all application pages."""
 
         pages = {
+
+            # --------------------------------------------------
+            # MONITORING
+            # --------------------------------------------------
+
             "Overview": OverviewPage,
+
             "Traffic Monitor": TrafficPage,
+
             "Assets": AssetsPage,
+
+            # --------------------------------------------------
+            # SECURITY
+            # --------------------------------------------------
+
             "Alerts": AlertsPage,
+
             "Decisions": DecisionsPage,
+
             "Event Logs": LogsPage,
+
+            "Security Operations": (
+                SecurityOperationsPage
+            ),
+
             "Incident Center": IncidentsPage,
+
             "Security Analytics": AnalyticsPage,
-            "System Integration": IntegrationPage,
+
             "Security Policies": PoliciesPage,
+
+            # --------------------------------------------------
+            # INTEGRATION
+            # --------------------------------------------------
+
+            "System Integration": IntegrationPage,
+
             "Live Event Monitor": EventMonitorPage,
-            "Live Module Integration": LiveIntegrationPage,
+
+            "Live Module Integration": (
+                LiveIntegrationPage
+            ),
         }
 
         for name, page_class in pages.items():
 
-            # Existing System Integration page.
+            # ==================================================
+            # SYSTEM INTEGRATION
+            # ==================================================
+
             if page_class is IntegrationPage:
 
                 page = page_class(
@@ -132,30 +192,57 @@ class MainWindow(QMainWindow):
                     self._app_context.integration_manager,
                 )
 
-            # Existing Live Event Monitor.
+            # ==================================================
+            # LIVE EVENT MONITOR
+            # ==================================================
+
             elif page_class is EventMonitorPage:
 
                 page = page_class(
                     self._app_context.event_bus,
                 )
 
-            # New Day 12 Live Module Integration page.
+            # ==================================================
+            # LIVE MODULE INTEGRATION
+            # ==================================================
+
             elif page_class is LiveIntegrationPage:
 
                 page = page_class(
                     self._app_context.integration_manager,
                 )
 
-            # Normal pages.
+            # ==================================================
+            # SECURITY OPERATIONS
+            # ==================================================
+
+            elif page_class is SecurityOperationsPage:
+
+                page = page_class(
+                    self._app_context.event_bus,
+                )
+
+            # ==================================================
+            # NORMAL PAGES
+            # ==================================================
+
             else:
 
                 page = page_class()
+
+            # --------------------------------------------------
+            # Store page
+            # --------------------------------------------------
 
             self._pages[name] = page
 
             self.page_stack.addWidget(
                 page
             )
+
+    # ==========================================================
+    # NAVIGATION
+    # ==========================================================
 
     def _show_page(
         self,
@@ -168,11 +255,26 @@ class MainWindow(QMainWindow):
         )
 
         if page is None:
+
+            print(
+                f"[VoltGuard] Page not found: "
+                f"{page_name}"
+            )
+
             return
 
         self.page_stack.setCurrentWidget(
             page
         )
+
+        # Keep sidebar state synchronized.
+        self.sidebar.set_active_page(
+            page_name
+        )
+
+    # ==========================================================
+    # DYNAMIC PAGE SUPPORT
+    # ==========================================================
 
     def _add_page(
         self,

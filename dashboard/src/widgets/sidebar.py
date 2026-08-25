@@ -18,13 +18,21 @@ class Sidebar(QFrame):
         super().__init__(parent)
 
         self.setObjectName("sidebar")
-        self.setFixedWidth(220)
+
+        # Fixed width keeps the navigation stable
+        # when the application enters fullscreen mode.
+        self.setFixedWidth(240)
 
         self._buttons: Dict[str, QPushButton] = {}
 
         self._build_ui()
 
+        # Default page
         self.set_active_page("Overview")
+
+    # ==========================================================
+    # BUILD UI
+    # ==========================================================
 
     def _build_ui(self) -> None:
         """Build the sidebar navigation."""
@@ -38,11 +46,11 @@ class Sidebar(QFrame):
             18,
         )
 
-        layout.setSpacing(6)
+        layout.setSpacing(5)
 
-        # -------------------------------------------------
+        # ======================================================
         # BRANDING
-        # -------------------------------------------------
+        # ======================================================
 
         logo = QLabel("VOLTGUARD")
 
@@ -61,9 +69,9 @@ class Sidebar(QFrame):
         layout.addWidget(logo)
         layout.addWidget(subtitle)
 
-        # -------------------------------------------------
+        # ======================================================
         # TOP SEPARATOR
-        # -------------------------------------------------
+        # ======================================================
 
         separator = QFrame()
 
@@ -77,9 +85,9 @@ class Sidebar(QFrame):
         layout.addWidget(separator)
         layout.addSpacing(12)
 
-        # -------------------------------------------------
+        # ======================================================
         # MONITORING
-        # -------------------------------------------------
+        # ======================================================
 
         monitoring_title = QLabel(
             "MONITORING"
@@ -104,9 +112,9 @@ class Sidebar(QFrame):
             monitoring_items,
         )
 
-        # -------------------------------------------------
+        # ======================================================
         # SECURITY
-        # -------------------------------------------------
+        # ======================================================
 
         security_title = QLabel(
             "SECURITY"
@@ -126,10 +134,10 @@ class Sidebar(QFrame):
             ("⚠", "Alerts"),
             ("✓", "Decisions"),
             ("≡", "Event Logs"),
-            ("◆", "Incident Center"),
-            ("▥", "Security Analytics"),
-            ("◇", "Security Policies"),
-            ("⇄", "Live Module Integration"),
+            ("◈", "Security Operations"),
+            ("◌", "Incident Center"),
+            ("⌁", "Security Analytics"),
+            ("▰", "Security Policies"),
         ]
 
         self._add_navigation_items(
@@ -137,9 +145,9 @@ class Sidebar(QFrame):
             security_items,
         )
 
-        # -------------------------------------------------
+        # ======================================================
         # INTEGRATION
-        # -------------------------------------------------
+        # ======================================================
 
         integration_title = QLabel(
             "INTEGRATION"
@@ -158,6 +166,7 @@ class Sidebar(QFrame):
         integration_items = [
             ("↔", "System Integration"),
             ("◌", "Live Event Monitor"),
+            ("◈", "Live Module Integration"),
         ]
 
         self._add_navigation_items(
@@ -165,9 +174,9 @@ class Sidebar(QFrame):
             integration_items,
         )
 
-        # -------------------------------------------------
+        # ======================================================
         # BOTTOM SYSTEM STATUS
-        # -------------------------------------------------
+        # ======================================================
 
         layout.addStretch()
 
@@ -209,6 +218,10 @@ class Sidebar(QFrame):
             status
         )
 
+    # ==========================================================
+    # NAVIGATION BUTTON CREATION
+    # ==========================================================
+
     def _add_navigation_items(
         self,
         layout: QVBoxLayout,
@@ -230,6 +243,7 @@ class Sidebar(QFrame):
                 button.cursor()
             )
 
+            # Capture the current text correctly.
             button.clicked.connect(
                 lambda checked=False,
                 item=text:
@@ -241,6 +255,10 @@ class Sidebar(QFrame):
             layout.addWidget(
                 button
             )
+
+    # ==========================================================
+    # NAVIGATION EVENT
+    # ==========================================================
 
     def _navigation_clicked(
         self,
@@ -256,6 +274,10 @@ class Sidebar(QFrame):
             destination
         )
 
+    # ==========================================================
+    # ACTIVE PAGE
+    # ==========================================================
+
     def set_active_page(
         self,
         page_name: str,
@@ -264,11 +286,17 @@ class Sidebar(QFrame):
 
         for name, button in self._buttons.items():
 
-            button.setProperty(
-                "active",
-                name == page_name,
+            is_active = (
+                name == page_name
             )
 
+            button.setProperty(
+                "active",
+                is_active,
+            )
+
+            # Refresh stylesheet after changing
+            # the dynamic property.
             button.style().unpolish(
                 button
             )
