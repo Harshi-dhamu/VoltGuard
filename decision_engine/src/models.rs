@@ -47,6 +47,7 @@ pub enum DecisionReason {
     PhysicsStatusSafe,
     PhysicsStatusWarning,
     PhysicsStatusCritical,
+
     CatastrophicFailure,
 
     PressureLimitExceeded,
@@ -65,4 +66,44 @@ pub struct DecisionResult {
     pub device_id: String,
     pub decision: Decision,
     pub reason: DecisionReason,
+}
+
+impl DecisionReason {
+    /// Returns a human-readable explanation for the decision reason.
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::PhysicsStatusSafe =>
+                "Physics Engine reported a safe physical state.",
+
+            Self::PhysicsStatusWarning =>
+                "Physics Engine reported a warning physical state.",
+
+            Self::PhysicsStatusCritical =>
+                "Physics Engine reported a critical physical state.",
+
+            Self::CatastrophicFailure =>
+                "Physics Engine predicted a catastrophic physical failure.",
+
+            Self::PressureLimitExceeded =>
+                "Predicted pressure exceeds the configured safe pressure limit.",
+
+            Self::FlowLimitExceeded =>
+                "Predicted flow exceeds the configured safe flow limit.",
+
+            Self::PumpSpeedExceeded =>
+                "Predicted pump speed exceeds the configured safe pump speed limit.",
+
+            Self::InvalidPhysicalState =>
+                "The physical state returned by the Physics Engine is invalid.",
+
+            Self::InvalidInput =>
+                "The Decision Engine received invalid input.",
+
+            Self::MissingPhysicsData =>
+                "Required physics data is missing.",
+
+            Self::UnknownPhysicsStatus =>
+                "The Physics Engine returned an unknown or unavailable status.",
+        }
+    }
 }
