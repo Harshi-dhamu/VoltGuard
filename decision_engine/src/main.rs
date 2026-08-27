@@ -1,11 +1,11 @@
 mod decision;
 mod error;
 mod models;
+mod physics_consumer;
 
 use std::io::{self, Read};
 
-use decision::DecisionEngine;
-use models::PhysicsResult;
+use physics_consumer::PhysicsConsumer;
 
 fn main() {
     let exit_code = match run() {
@@ -19,7 +19,8 @@ fn main() {
     std::process::exit(exit_code);
 }
 
-/// Reads PhysicsResult JSON from stdin and produces a DecisionResult JSON.
+/// Reads Dhruti's Physics Engine JSON from stdin
+/// and produces a DecisionResult JSON.
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
 
@@ -29,11 +30,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Err("input JSON cannot be empty".into());
     }
 
-    let physics_result: PhysicsResult = serde_json::from_str(&input)?;
+    let consumer = PhysicsConsumer::new();
 
-    let engine = DecisionEngine::new();
-
-    let decision_result = engine.evaluate_fail_closed(&physics_result);
+    let decision_result = consumer.evaluate_json(&input)?;
 
     let output = serde_json::to_string_pretty(&decision_result)?;
 

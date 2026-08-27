@@ -46,6 +46,7 @@ pub enum Decision {
 pub enum DecisionReason {
     PhysicsStatusSafe,
     PhysicsStatusWarning,
+    PhysicsStatusCritical,
     CatastrophicFailure,
 
     PressureLimitExceeded,
