@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod decision;
 pub mod error;
 pub mod models;
