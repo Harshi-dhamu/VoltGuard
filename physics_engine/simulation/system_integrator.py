@@ -108,3 +108,43 @@ class SystemIntegrator:
             "health_summary": health_summary,
             "integration_event": integration_event,
         }
+
+    def run_continuous_simulation(
+        self,
+        cycles: int,
+        pump_speed_rpm: float,
+        valve_position_percent: float,
+        initial_tank_level_liters: float,
+        time_minutes: float,
+        pipe_pressure_psi: float,
+    ) -> list:
+        """
+        Run multiple Physics Engine simulation cycles.
+
+        The final tank level of each cycle becomes
+        the initial tank level of the next cycle.
+        """
+
+        if cycles <= 0:
+            raise ValueError("cycles must be greater than zero.")
+
+        results = []
+
+        current_tank_level = initial_tank_level_liters
+
+        for cycle_number in range(1, cycles + 1):
+            result = self.run_cycle(
+                pump_speed_rpm=pump_speed_rpm,
+                valve_position_percent=valve_position_percent,
+                initial_tank_level_liters=current_tank_level,
+                time_minutes=time_minutes,
+                pipe_pressure_psi=pipe_pressure_psi,
+            )
+
+            result["cycle_number"] = cycle_number
+            results.append(result)
+
+            # Carry the final tank level into the next cycle.
+            current_tank_level = result["tank"]["final_level_liters"]
+
+        return results
