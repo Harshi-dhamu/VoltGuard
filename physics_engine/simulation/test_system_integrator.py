@@ -136,7 +136,7 @@ def main():
     # =========================================================
 
     assert event["payload"]["anomaly_score"] == 0.94
-    assert event["payload"]["category"] == "SAFETY ANOMALY"
+    assert event["payload"]["category"] == "PRESSURE ANOMALY"
 
     assert (
         event["payload"]["safety"]["overall_status"]

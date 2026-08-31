@@ -21,10 +21,17 @@ class IntegrationEventAdapter:
         payload: dict,
     ) -> dict:
         """
-        Build a Physics Engine integration event.
+        Build a standard IntegrationEvent dictionary.
 
-        The returned dictionary follows the agreed
-        IntegrationEvent contract.
+        Contract fields:
+            event_id
+            source_module
+            event_type
+            timestamp
+            severity
+            asset
+            message
+            payload
         """
 
         return {
@@ -51,21 +58,108 @@ class IntegrationEventAdapter:
         safety_data: dict | None = None,
         telemetry_data: dict | None = None,
         health_summary: dict | None = None,
+        predicted_pressure: float | None = None,
+        pressure_limit: float = 100.0,
+        predicted_flow: float | None = None,
+        pump_speed: float | None = None,
+        status: str | None = None,
+        health_score: float | None = None,
     ) -> dict:
         """
-        Build a PROCESS_ANOMALY event containing
-        Physics Engine process information.
+        Build a PROCESS_ANOMALY IntegrationEvent.
+
+        This adapter does not depend on the dashboard.
+        It only converts Physics Engine information into
+        the agreed IntegrationEvent dictionary structure.
         """
+
+        flow_data = flow_data or {}
+        tank_data = tank_data or {}
+        safety_data = safety_data or {}
+        telemetry_data = telemetry_data or {}
+        health_summary = health_summary or {}
+        details = details or {}
+
+        # -----------------------------------------------------
+        # Get process values from flow data when not explicitly
+        # supplied.
+        # -----------------------------------------------------
+
+        if pump_speed is None:
+            pump_speed = flow_data.get("pump_speed_rpm")
+
+        if predicted_flow is None:
+            predicted_flow = flow_data.get("actual_flow_lpm")
+
+        # -----------------------------------------------------
+        # Pressure information
+        # -----------------------------------------------------
+
+        if predicted_pressure is None:
+            predicted_pressure = safety_data.get(
+                "predicted_pressure",
+                safety_data.get("pipe_pressure_psi", 0),
+            )
+
+        # -----------------------------------------------------
+        # Calculate health score automatically when not supplied.
+        #
+        # anomaly_score:
+        # 0.0 = normal
+        # 1.0 = extremely anomalous
+        #
+        # health_score:
+        # 100 = healthy
+        # 0 = failed
+        # -----------------------------------------------------
+
+        if health_score is None:
+            health_score = round(
+                max(
+                    0.0,
+                    min(
+                        100.0,
+                        (1.0 - anomaly_score) * 100.0,
+                    ),
+                ),
+                2,
+            )
+
+        # -----------------------------------------------------
+        # Determine process status automatically.
+        # -----------------------------------------------------
+
+        if status is None:
+            if severity == "CRITICAL" and anomaly_score >= 0.90:
+                status = "CATASTROPHIC_FAILURE"
+            elif severity in {"HIGH", "CRITICAL"}:
+                status = "ANOMALY_DETECTED"
+            else:
+                status = "NORMAL"
+
+        # -----------------------------------------------------
+        # Build payload
+        # -----------------------------------------------------
 
         payload = {
             "anomaly_score": anomaly_score,
             "category": category,
-            "details": details or {},
-            "flow": flow_data or {},
-            "tank": tank_data or {},
-            "safety": safety_data or {},
-            "telemetry": telemetry_data or {},
-            "health_summary": health_summary or {},
+
+            # Values requested by Harshi
+            "predicted_pressure": predicted_pressure,
+            "pressure_limit": pressure_limit,
+            "predicted_flow": predicted_flow,
+            "pump_speed": pump_speed,
+            "status": status,
+            "health_score": health_score,
+
+            # Detailed Physics Engine information
+            "details": details,
+            "flow": flow_data,
+            "tank": tank_data,
+            "safety": safety_data,
+            "telemetry": telemetry_data,
+            "health_summary": health_summary,
         }
 
         return self.build_event(
