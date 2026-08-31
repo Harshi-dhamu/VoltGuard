@@ -15,7 +15,7 @@ class CentralEventBusDispatcher:
         self.sync_listeners: List[Callable[[Dict[str, Any]], None]] = []
 
     def register_sync_listener(self, listener: Callable[[Dict[str, Any]], None]) -> None:
-        """Registers a synchronous listener (e.g., Harshi's main EventBus handler)."""
+        """Registers a synchronous listener (e.g., central EventBus handler)."""
         self.sync_listeners.append(listener)
         logger.info("[DISPATCHER] Sync listener registered.")
 
