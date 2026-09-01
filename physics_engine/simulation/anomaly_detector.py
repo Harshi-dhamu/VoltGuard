@@ -1,8 +1,14 @@
+from physics_engine.simulation.severity_classifier import SeverityClassifier
+
+
 class AnomalyDetector:
     """
     Detects physical process anomalies from
     Physics Engine simulation output.
     """
+
+    def __init__(self):
+        self.severity_classifier = SeverityClassifier()
 
     def detect(
         self,
@@ -24,6 +30,7 @@ class AnomalyDetector:
                     "asset": "PUMP_01",
                     "value": pump_speed,
                     "message": "Pump speed cannot be negative.",
+                    "anomaly_score": 1.0,
                 })
 
             elif pump_speed > 5000:
@@ -32,13 +39,15 @@ class AnomalyDetector:
                     "asset": "PUMP_01",
                     "value": pump_speed,
                     "message": "Pump speed exceeds the physical safety limit.",
+                    "anomaly_score": 0.95,
                 })
 
         # -----------------------------
         # Pipe pressure anomaly
         # -----------------------------
         pipe_check = safety_data.get("checks", {}).get(
-            "pipe_pressure", {}
+            "pipe_pressure",
+            {},
         )
 
         if pipe_check.get("status") == "CRITICAL":
@@ -49,6 +58,7 @@ class AnomalyDetector:
                     "message",
                     "Abnormal pipe pressure detected.",
                 ),
+                "anomaly_score": 0.94,
             })
 
         # -----------------------------
@@ -63,6 +73,7 @@ class AnomalyDetector:
                     "asset": "TANK_01",
                     "value": tank_level,
                     "message": "Tank level cannot be negative.",
+                    "anomaly_score": 1.0,
                 })
 
             elif tank_level > 10000:
@@ -71,6 +82,7 @@ class AnomalyDetector:
                     "asset": "TANK_01",
                     "value": tank_level,
                     "message": "Tank level exceeds tank capacity.",
+                    "anomaly_score": 0.95,
                 })
 
         # -----------------------------
@@ -85,6 +97,7 @@ class AnomalyDetector:
                 "asset": "PUMP_01",
                 "value": actual_flow,
                 "message": "Actual flow cannot be negative.",
+                "anomaly_score": 1.0,
             })
 
         if (
@@ -98,11 +111,32 @@ class AnomalyDetector:
                 "asset": "PUMP_01",
                 "value": actual_flow,
                 "expected": pump_flow,
-                "message": "Actual flow is significantly below expected pump flow.",
+                "message": (
+                    "Actual flow is significantly below "
+                    "expected pump flow."
+                ),
+                "anomaly_score": 0.82,
             })
+
+        # -----------------------------
+        # Calculate overall severity
+        # -----------------------------
+        highest_score = 0.0
+
+        for anomaly in anomalies:
+            score = anomaly.get("anomaly_score", 0.0)
+
+            if score > highest_score:
+                highest_score = score
+
+        severity = self.severity_classifier.classify(
+            highest_score
+        )
 
         return {
             "anomaly_detected": len(anomalies) > 0,
             "anomaly_count": len(anomalies),
             "anomalies": anomalies,
+            "anomaly_score": highest_score,
+            "severity": severity,
         }

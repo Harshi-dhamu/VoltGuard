@@ -6,15 +6,14 @@ from anomaly_detector import AnomalyDetector
 
 class SystemIntegrator:
     """
-    Integrates the complete Physics Engine pipeline:
-
-    Flow calculation
-    -> Tank simulation
-    -> Safety checking
-    -> Asset telemetry
-    -> Health summary
-    -> Anomaly detection
-    -> Integration event generation
+    Integrates:
+    - Flow calculation
+    - Tank simulation
+    - Safety checking
+    - Asset telemetry
+    - Health summary
+    - Anomaly detection
+    - Integration event generation
     """
 
     def __init__(
@@ -23,25 +22,20 @@ class SystemIntegrator:
         tank_simulator,
         safety_checker,
         telemetry_service=None,
-        anomaly_detector=None,
     ):
         self.flow_calculator = flow_calculator
         self.tank_simulator = tank_simulator
         self.safety_checker = safety_checker
 
-        self.telemetry_service = (
-            telemetry_service or TelemetryService()
-        )
-
+        # Services
+        self.telemetry_service = telemetry_service or TelemetryService()
         self.health_summary_service = HealthSummaryService()
 
-        self.integration_event_adapter = (
-            IntegrationEventAdapter()
-        )
+        # Integration event adapter
+        self.integration_event_adapter = IntegrationEventAdapter()
 
-        self.anomaly_detector = (
-            anomaly_detector or AnomalyDetector()
-        )
+        # Anomaly detector
+        self.anomaly_detector = AnomalyDetector()
 
     def run_cycle(
         self,
@@ -51,6 +45,9 @@ class SystemIntegrator:
         time_minutes: float,
         pipe_pressure_psi: float,
     ) -> dict:
+        """
+        Run one complete Physics Engine simulation cycle.
+        """
 
         # =====================================================
         # STEP 1: FLOW CALCULATION
@@ -87,22 +84,18 @@ class SystemIntegrator:
         # STEP 4: ASSET TELEMETRY
         # =====================================================
 
-        telemetry_state = (
-            self.telemetry_service.build_asset_telemetry(
-                flow_data=flow_state,
-                tank_data=tank_state,
-                safety_data=safety_state,
-            )
+        telemetry_state = self.telemetry_service.build_asset_telemetry(
+            flow_data=flow_state,
+            tank_data=tank_state,
+            safety_data=safety_state,
         )
 
         # =====================================================
         # STEP 5: HEALTH SUMMARY
         # =====================================================
 
-        health_summary = (
-            self.health_summary_service.build_health_summary(
-                telemetry_data=telemetry_state,
-            )
+        health_summary = self.health_summary_service.build_health_summary(
+            telemetry_data=telemetry_state,
         )
 
         # =====================================================
@@ -123,66 +116,119 @@ class SystemIntegrator:
 
         if anomaly_state["anomaly_detected"]:
 
-            anomalies = anomaly_state["anomalies"]
+            anomalies = anomaly_state.get("anomalies", [])
 
-            first_anomaly = anomalies[0]
+            # Take the most important anomaly
+            primary_anomaly = (
+                anomalies[0]
+                if anomalies
+                else {}
+            )
 
-            # Determine severity
-            if safety_state["overall_status"] == "CRITICAL":
-                severity = "CRITICAL"
-                status = "CATASTROPHIC_FAILURE"
-                health_score = 6.0
+            asset = primary_anomaly.get(
+                "asset",
+                "PROCESS",
+            )
+
+            message = primary_anomaly.get(
+                "message",
+                "Abnormal process behaviour detected.",
+            )
+
+            anomaly_score = anomaly_state.get(
+                "anomaly_score",
+                0.0,
+            )
+
+            severity = anomaly_state.get(
+                "severity",
+                "LOW",
+            )
+
+            anomaly_type = primary_anomaly.get(
+                "type",
+                "PROCESS_ANOMALY",
+            )
+
+            # Convert anomaly type into readable category
+            category_map = {
+                "PUMP_SPEED_ANOMALY": "PUMP SPEED ANOMALY",
+                "PRESSURE_ANOMALY": "PRESSURE ANOMALY",
+                "TANK_LEVEL_ANOMALY": "TANK LEVEL ANOMALY",
+                "FLOW_ANOMALY": "FLOW ANOMALY",
+            }
+
+            category = category_map.get(
+                anomaly_type,
+                "PROCESS ANOMALY",
+            )
+
+            # =================================================
+            # Calculate event status
+            # =================================================
+
+            if severity == "CRITICAL":
+                event_status = "CATASTROPHIC_FAILURE"
+
+            elif severity == "HIGH":
+                event_status = "ANOMALY_DETECTED"
+
+            elif severity == "MEDIUM":
+                event_status = "WARNING"
 
             else:
-                severity = "HIGH"
-                status = "ANOMALY_DETECTED"
-                health_score = 18.0
+                event_status = "NORMAL"
 
-            # Determine category
-            anomaly_type = first_anomaly["type"]
+            # =================================================
+            # Health score
+            # =================================================
 
-            if anomaly_type == "PRESSURE_ANOMALY":
-                category = "PRESSURE ANOMALY"
+            health_score = max(
+                0.0,
+                round((1.0 - anomaly_score) * 100, 2),
+            )
 
-            elif anomaly_type == "FLOW_ANOMALY":
-                category = "FLOW ANOMALY"
+            # =================================================
+            # Predicted values
+            # =================================================
 
-            elif anomaly_type == "PUMP_SPEED_ANOMALY":
-                category = "COMMAND ANOMALY"
+            predicted_pressure = flow_state.get(
+                "predicted_pressure_psi",
+                pipe_pressure_psi,
+            )
 
-            elif anomaly_type == "TANK_LEVEL_ANOMALY":
-                category = "TANK ANOMALY"
+            predicted_flow = flow_state.get(
+                "predicted_flow_lpm",
+                flow_state.get(
+                    "pump_flow_lpm",
+                    actual_flow_lpm,
+                ),
+            )
 
-            else:
-                category = "PROCESS ANOMALY"
+            # =================================================
+            # Event payload
+            # =================================================
 
-            # Build event
+            details = {
+                "anomaly_count": anomaly_state.get(
+                    "anomaly_count",
+                    0,
+                ),
+                "anomalies": anomalies,
+                "reason": (
+                    "Physics Engine anomaly detector "
+                    "identified abnormal process behaviour."
+                ),
+            }
+
             integration_event = (
-                self.integration_event_adapter
-                .build_process_anomaly_event(
+                self.integration_event_adapter.build_process_anomaly_event(
                     severity=severity,
-                    asset=first_anomaly.get(
-                        "asset",
-                        "PUMP_01",
-                    ),
-                    message=first_anomaly.get(
-                        "message",
-                        "Abnormal process behaviour detected",
-                    ),
-                    anomaly_score=0.94
-                    if severity == "CRITICAL"
-                    else 0.82,
+                    asset=asset,
+                    message=message,
+                    anomaly_score=anomaly_score,
                     category=category,
-                    details={
-                        "anomaly_count": anomaly_state[
-                            "anomaly_count"
-                        ],
-                        "anomalies": anomalies,
-                        "reason": (
-                            "Physics Engine anomaly detector "
-                            "identified abnormal process behaviour."
-                        ),
-                    },
+                    details=details,
                     flow_data=flow_state,
                     tank_data=tank_state,
                     safety_data=safety_state,
@@ -191,32 +237,34 @@ class SystemIntegrator:
                 )
             )
 
-            # Add additional integration payload
-            integration_event["payload"].update(
-                {
-                    "predicted_pressure": flow_state.get(
-                        "predicted_pressure_psi",
-                        pipe_pressure_psi,
-                    ),
-                    "pressure_limit": (
-                        self.safety_checker
-                        .max_pipe_pressure_psi
-                    ),
-                    "predicted_flow": flow_state.get(
-                        "predicted_flow_lpm",
-                        flow_state.get(
-                            "pump_flow_lpm",
-                            0.0,
-                        ),
-                    ),
-                    "pump_speed": pump_speed_rpm,
-                    "status": status,
-                    "health_score": health_score,
-                }
+            # Add additional fields required by the
+            # Physics Engine integration contract.
+            integration_event["payload"]["predicted_pressure"] = (
+                predicted_pressure
+            )
+
+            integration_event["payload"]["pressure_limit"] = (
+                self.safety_checker.max_pipe_pressure_psi
+            )
+
+            integration_event["payload"]["predicted_flow"] = (
+                predicted_flow
+            )
+
+            integration_event["payload"]["pump_speed"] = (
+                pump_speed_rpm
+            )
+
+            integration_event["payload"]["status"] = (
+                event_status
+            )
+
+            integration_event["payload"]["health_score"] = (
+                health_score
             )
 
         # =====================================================
-        # STEP 8: RETURN COMPLETE SYSTEM RESULT
+        # STEP 8: FINAL SYSTEM RESULT
         # =====================================================
 
         return {
