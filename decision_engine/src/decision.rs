@@ -155,6 +155,11 @@ mod tests {
         PhysicsResult {
             device_id: "PUMP_01".to_string(),
             command: "SET_SPEED".to_string(),
+
+            // Fields required by the current PhysicsResult model.
+            pressure: Some(80.0),
+            flow: Some(200.0),
+
             value: 1500.0,
             unit: "RPM".to_string(),
 
@@ -180,7 +185,10 @@ mod tests {
             .expect("safe result should be valid");
 
         assert_eq!(result.decision, Decision::Allow);
-        assert_eq!(result.reason, DecisionReason::PhysicsStatusSafe);
+        assert_eq!(
+            result.reason,
+            DecisionReason::PhysicsStatusSafe
+        );
     }
 
     #[test]
