@@ -31,5 +31,9 @@ class PacketHoldBuffer:
         pkt_data["status"] = action  # "ALLOW" or "DROP"
         return pkt_data
 
+    def get_packet(self, token: str) -> Optional[Dict[str, Any]]:
+        """Returns a held packet without removing it from the buffer."""
+        return self._buffer.get(token)
+
     def get_held_count(self) -> int:
         return len(self._buffer)
