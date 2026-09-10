@@ -23,7 +23,7 @@ class InlineInterceptorPipeline:
 
         # 2. HOLD Packet
         token = self.hold_buffer.hold_packet(parsed_pkt, raw_bytes)
-        logger.info(f"[INLINE HOLD] Token {token[:8]}... created for TxID {parsed_pkt['transaction_id']}")
+        logger.debug(f"[INLINE HOLD] Token {token[:8]}... created for TxID {parsed_pkt['transaction_id']}")
 
         # 3. Evaluate & Enforce (ALLOW / DROP)
         resolved = self.dispatcher.process_held_token(token)
