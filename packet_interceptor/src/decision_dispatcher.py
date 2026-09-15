@@ -57,7 +57,7 @@ class DecisionEngineDispatcher:
         if release_after_decision:
             self.hold_buffer.release_packet(token, action)
 
-        logger.info(f"[DECISION ENGINE] Token: {str(token)[:8]}... | Action: {action}")
+        logger.debug(f"[DECISION ENGINE] Token: {str(token)[:8]}... | Action: {action}")
 
         result = dict(parsed_pkt)
         result.update({

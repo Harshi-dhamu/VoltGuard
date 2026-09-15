@@ -114,3 +114,34 @@ class ResilientEventDispatcher:
         items = list(self.dlq)
         self.dlq.clear()
         return items
+
+
+class ResilientEventBusDispatcher:
+    """Compatibility dispatcher for the interceptor event-bus pipeline."""
+
+    def __init__(self, async_buffer_size: int = 200, dlq_capacity: int = 100):
+        from queue import Queue
+
+        self.async_buffer = Queue(maxsize=async_buffer_size)
+        self.dead_letter_queue: deque = deque(maxlen=dlq_capacity)
+        self.sync_listeners: List[Callable[[Dict[str, Any]], None]] = []
+
+    def register_sync_listener(self, listener: Callable[[Dict[str, Any]], None]) -> None:
+        self.sync_listeners.append(listener)
+
+    def dispatch_safe(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        for listener in self.sync_listeners:
+            try:
+                listener(event)
+            except Exception as error:
+                self.dead_letter_queue.append(
+                    {"event": event, "dlq_reason": f"ListenerError: {error}"}
+                )
+
+        try:
+            self.async_buffer.put_nowait(event)
+        except Exception:
+            self.dead_letter_queue.append(
+                {"event": event, "dlq_reason": "AsyncBufferOverflow"}
+            )
+        return event
